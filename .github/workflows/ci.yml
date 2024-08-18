@@ -1,0 +1,39 @@
+name: ci
+on:
+  push:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: 1.x
+
+      - name: lint
+        if: runner.os == 'Linux'
+        run: |
+          deno lint
+          deno doc --lint mod.ts
+
+      - name: Tests
+        run: deno test
+
+  publish:
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: 1.x
+      - name: Publish to JSR on tag
+        if: runner.os == 'Linux'
+        run: deno run -A jsr:@david/publish-on-tag@0.1.3

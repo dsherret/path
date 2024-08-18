@@ -1,0 +1,45 @@
+{
+  "version": "3",
+  "packages": {
+    "specifiers": {
+      "jsr:@david/which-runtime@^0.2.0": "jsr:@david/which-runtime@0.2.0",
+      "jsr:@std/assert@^1": "jsr:@std/assert@1.0.2",
+      "jsr:@std/fs@^1": "jsr:@std/fs@1.0.1",
+      "jsr:@std/internal@^1.0.1": "jsr:@std/internal@1.0.1",
+      "jsr:@std/path@^1": "jsr:@std/path@1.0.2",
+      "jsr:@std/path@^1.0.2": "jsr:@std/path@1.0.2"
+    },
+    "jsr": {
+      "@david/which-runtime@0.2.0": {
+        "integrity": "69c59142babcff447efff6a6460316131b702ce1713f9f5ddbbb909136d6d7cd"
+      },
+      "@std/assert@1.0.2": {
+        "integrity": "ccacec332958126deaceb5c63ff8b4eaf9f5ed0eac9feccf124110435e59e49c",
+        "dependencies": [
+          "jsr:@std/internal@^1.0.1"
+        ]
+      },
+      "@std/fs@1.0.1": {
+        "integrity": "d6914ca2c21abe591f733b31dbe6331e446815e513e2451b3b9e472daddfefcb",
+        "dependencies": [
+          "jsr:@std/path@^1.0.2"
+        ]
+      },
+      "@std/internal@1.0.1": {
+        "integrity": "6f8c7544d06a11dd256c8d6ba54b11ed870aac6c5aeafff499892662c57673e6"
+      },
+      "@std/path@1.0.2": {
+        "integrity": "a452174603f8c620bd278a380c596437a9eef50c891c64b85812f735245d9ec7"
+      }
+    }
+  },
+  "remote": {},
+  "workspace": {
+    "dependencies": [
+      "jsr:@david/which-runtime@^0.2.0",
+      "jsr:@std/assert@^1",
+      "jsr:@std/fs@^1",
+      "jsr:@std/path@^1"
+    ]
+  }
+}

@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v1
         with:
-          deno-version: 1.x
+          deno-version: canary
 
       - name: lint
         if: runner.os == 'Linux'
@@ -22,7 +22,7 @@ jobs:
           deno doc --lint mod.ts
 
       - name: Tests
-        run: deno test
+        run: deno test -A
 
   publish:
     permissions:
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v1
         with:
-          deno-version: 1.x
+          deno-version: canary
       - name: Publish to JSR on tag
         if: runner.os == 'Linux'
         run: deno run -A jsr:@david/publish-on-tag@0.1.3

@@ -1,5 +1,6 @@
 {
   "name": "@david/path",
+  "version": "0.0.0",
   "imports": {
     "@david/which-runtime": "jsr:@david/which-runtime@^0.2.0",
     "@std/assert": "jsr:@std/assert@^1",

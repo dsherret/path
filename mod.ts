@@ -12,25 +12,8 @@ import { emptyDir, emptyDirSync } from "@std/fs/empty-dir";
 import { ensureDir, ensureDirSync } from "@std/fs/ensure-dir";
 import { ensureFile, ensureFileSync } from "@std/fs/ensure-file";
 import { copy, copySync } from "@std/fs/copy";
-import { walk, walkSync } from "@std/fs/walk";
-import { expandGlob, expandGlobSync } from "@std/fs/expand-glob";
 
-/**
- * `ExpandGlobOptions` from https://deno.land/std/fs/expand_glob.ts
- * @internal
- */
-type DenoStdExpandGlobOptions = import("@std/fs/expand-glob").ExpandGlobOptions;
-/** Options for expanding globs in a directory. */
-export type ExpandGlobOptions = DenoStdExpandGlobOptions;
-/**
- * `WalkOptions` from https://deno.land/std/fs/walk.ts
- * @internal
- */
-type DenoStdWalkOptions = import("@std/fs/walk").WalkOptions;
-/** Options for walking a directory. */
-export type WalkOptions = DenoStdWalkOptions;
-
-/** Directory entry when walking or reading a directory. */
+/** Directory entry when reading a directory. */
 export interface DirEntry extends Deno.DirEntry {
   /** Path of this directory entry. */
   path: Path;
@@ -441,59 +424,6 @@ export class Path {
   /** Synchronously resolves to the absolute normalized path, with symbolic links resolved. */
   realPathSync(): Path {
     return new Path(Deno.realPathSync(this.#path));
-  }
-
-  /** Expands the glob using the current path as the root. */
-  async *expandGlob(
-    glob: string | URL,
-    options?: Omit<ExpandGlobOptions, "root">,
-  ): AsyncGenerator<DirEntry, void, unknown> {
-    const entries = expandGlob(glob, {
-      root: this.resolve().toString(),
-      ...options,
-    });
-    for await (const entry of entries) {
-      yield this.#stdWalkEntryToDax(entry);
-    }
-  }
-
-  /** Synchronously expands the glob using the current path as the root. */
-  *expandGlobSync(
-    glob: string | URL,
-    options?: Omit<ExpandGlobOptions, "root">,
-  ): Generator<DirEntry, void, unknown> {
-    const entries = expandGlobSync(glob, {
-      root: this.resolve().toString(),
-      ...options,
-    });
-    for (const entry of entries) {
-      yield this.#stdWalkEntryToDax(entry);
-    }
-  }
-
-  /** Walks the file tree rooted at the current path, yielding each file or
-   * directory in the tree filtered according to the given options. */
-  async *walk(options?: WalkOptions): AsyncIterableIterator<DirEntry> {
-    // Resolve the path before walking so that these paths always point to
-    // absolute paths in the case that someone changes the cwd after walking.
-    for await (const entry of walk(this.resolve().toString(), options)) {
-      yield this.#stdWalkEntryToDax(entry);
-    }
-  }
-
-  /** Synchronously walks the file tree rooted at the current path, yielding each
-   * file or directory in the tree filtered according to the given options. */
-  *walkSync(options?: WalkOptions): Iterable<DirEntry> {
-    for (const entry of walkSync(this.resolve().toString(), options)) {
-      yield this.#stdWalkEntryToDax(entry);
-    }
-  }
-
-  #stdWalkEntryToDax(entry: import("@std/fs/walk").WalkEntry): DirEntry {
-    return {
-      ...entry,
-      path: new Path(entry.path),
-    };
   }
 
   /** Creates a directory at this path.

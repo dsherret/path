@@ -28,5 +28,4 @@ dataFile.writeTextSync("Hello there!");
 
 ## Road to 1.0
 
-I would like to stabilize this to 1.0, but first I want to get more feedback on
-it.
+I would like to stabilize this, but first I want to get more feedback on it.

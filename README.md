@@ -3,9 +3,9 @@
 [![JSR](https://jsr.io/badges/@david/path)](https://jsr.io/@david/path)
 
 Path class for JavaScript built on top of [@std/path](https://jsr.io/@std/path)
-and [@std/fs](https://jsr.io/@std/path).
+and [@std/fs](https://jsr.io/@std/fs).
 
-- [Docs](https://jsr.io/@david/path/doc)
+- [Docs](https://jsr.io/@david/path/doc/~/Path)
 
 ## Setup
 
@@ -28,5 +28,4 @@ dataFile.writeTextSync("Hello there!");
 
 ## Road to 1.0
 
-I would like to stabilize this to 1.0, but first I want to get more feedback on
-it.
+I would like to stabilize this, but first I want to get more feedback on it.

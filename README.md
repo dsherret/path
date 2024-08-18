@@ -3,9 +3,9 @@
 [![JSR](https://jsr.io/badges/@david/path)](https://jsr.io/@david/path)
 
 Path class for JavaScript built on top of [@std/path](https://jsr.io/@std/path)
-and [@std/fs](https://jsr.io/@std/path).
+and [@std/fs](https://jsr.io/@std/fs).
 
-- [Docs](https://jsr.io/@david/path/doc)
+- [Docs](https://jsr.io/@david/path/doc/~/Path)
 
 ## Setup
 

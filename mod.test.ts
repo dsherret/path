@@ -958,6 +958,7 @@ Deno.test("instanceof check", () => {
     // should match because of this
     private static instanceofSymbol = Symbol.for("@david/path.Path");
 
+    // deno-lint-ignore no-explicit-any
     static [Symbol.hasInstance](instance: any) {
       return instance?.constructor?.instanceofSymbol ===
         OtherPath.instanceofSymbol;
@@ -997,6 +998,7 @@ function usingTempDir(): Path & AsyncDisposable {
   const dirPath = Deno.makeTempDirSync();
   Deno.chdir(dirPath);
   const pathRef = new Path(dirPath).resolve();
+  // deno-lint-ignore no-explicit-any
   (pathRef as any)[Symbol.asyncDispose] = async () => {
     try {
       await Deno.remove(dirPath, { recursive: true });

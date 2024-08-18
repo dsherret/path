@@ -22,7 +22,7 @@ jobs:
           deno doc --lint mod.ts
 
       - name: Tests
-        run: deno test
+        run: deno test -A
 
   publish:
     permissions:

@@ -5,6 +5,8 @@
 Path class for JavaScript built on top of [@std/path](https://jsr.io/@std/path)
 and [@std/fs](https://jsr.io/@std/path).
 
+- [Docs](https://jsr.io/@david/path/doc)
+
 ## Setup
 
 ```
@@ -23,8 +25,6 @@ console.log(srcDir.existsSync());
 const dataFile = srcDir.join("data.txt");
 dataFile.writeTextSync("Hello there!");
 ```
-
-- [Docs](https://jsr.io/@david/path/doc)
 
 ## Road to 1.0
 

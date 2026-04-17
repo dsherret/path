@@ -1,28 +1,39 @@
-import { basename } from "@std/path/basename";
-import { dirname } from "@std/path/dirname";
-import { extname } from "@std/path/extname";
-import { fromFileUrl } from "@std/path/from-file-url";
-import { isAbsolute } from "@std/path/is-absolute";
-import { join } from "@std/path/join";
-import { normalize } from "@std/path/normalize";
-import { relative } from "@std/path/relative";
-import { resolve } from "@std/path/resolve";
-import { toFileUrl } from "@std/path/to-file-url";
-import { emptyDir, emptyDirSync } from "@std/fs/empty-dir";
-import { ensureDir, ensureDirSync } from "@std/fs/ensure-dir";
-import { ensureFile, ensureFileSync } from "@std/fs/ensure-file";
-import { copy, copySync } from "@std/fs/copy";
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  join,
+  normalize,
+  relative,
+  resolve,
+} from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import * as _fs from "./_fs.ts";
+
+export type {
+  DirEntryInfo,
+  FileInfo,
+  MkdirOptions,
+  OpenOptions,
+  ReadFileOptions,
+  RemoveOptions,
+  WriteFileOptions,
+} from "./_fs.ts";
+export { FsFile } from "./_fs.ts";
 
 /** Directory entry when reading a directory. */
-export interface DirEntry extends Deno.DirEntry {
+export interface DirEntry extends _fs.DirEntryInfo {
   /** Path of this directory entry. */
   path: Path;
 }
 
 /** Options for creating a symlink. */
-export interface SymlinkOptions extends Partial<Deno.SymlinkOptions> {
+export interface SymlinkOptions {
   /** Creates the symlink as absolute or relative. */
   kind: "absolute" | "relative";
+  /** Kind of symlink to create. Required on Windows when the target doesn't exist. */
+  type?: "file" | "dir" | "junction";
 }
 
 /** Represents a path on the file system. */
@@ -41,12 +52,12 @@ export class Path {
   /** Creates a new path from the provided string, URL, or another Path. */
   constructor(path: string | URL | Path) {
     if (path instanceof URL) {
-      this.#path = fromFileUrl(path);
+      this.#path = fileURLToPath(path);
     } else if (path instanceof Path) {
       this.#path = path.toString();
     } else if (typeof path === "string") {
       if (path.startsWith("file://")) {
-        this.#path = fromFileUrl(path);
+        this.#path = fileURLToPath(path);
       } else {
         this.#path = path;
       }
@@ -82,7 +93,7 @@ export class Path {
   /** Resolves the path and gets the file URL. */
   toFileUrl(): URL {
     const resolvedPath = this.resolve();
-    return toFileUrl(resolvedPath.toString());
+    return pathToFileURL(resolvedPath.toString());
   }
 
   /** If this path reference is the same as another one. */
@@ -92,17 +103,17 @@ export class Path {
 
   /** Follows symlinks and gets if this path is a directory. */
   isDirSync(): boolean {
-    return this.statSync()?.isDirectory ?? false;
+    return this.statSync()?.isDirectory() ?? false;
   }
 
   /** Follows symlinks and gets if this path is a file. */
   isFileSync(): boolean {
-    return this.statSync()?.isFile ?? false;
+    return this.statSync()?.isFile() ?? false;
   }
 
   /** Gets if this path is a symlink. */
   isSymlinkSync(): boolean {
-    return this.lstatSync()?.isSymlink ?? false;
+    return this.lstatSync()?.isSymbolicLink() ?? false;
   }
 
   /** Gets if this path is an absolute path. */
@@ -146,12 +157,12 @@ export class Path {
     return new Path(normalize(this.#path));
   }
 
-  /** Resolves the `Deno.FileInfo` of this path following symlinks. */
-  async stat(): Promise<Deno.FileInfo | undefined> {
+  /** Resolves the file info of this path following symlinks. */
+  async stat(): Promise<_fs.FileInfo | undefined> {
     try {
-      return await Deno.stat(this.#path);
+      return await _fs.stat(this.#path);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         return undefined;
       } else {
         throw err;
@@ -159,13 +170,12 @@ export class Path {
     }
   }
 
-  /** Synchronously resolves the `Deno.FileInfo` of this
-   * path following symlinks. */
-  statSync(): Deno.FileInfo | undefined {
+  /** Synchronously resolves the file info of this path following symlinks. */
+  statSync(): _fs.FileInfo | undefined {
     try {
-      return Deno.statSync(this.#path);
+      return _fs.statSync(this.#path);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         return undefined;
       } else {
         throw err;
@@ -173,13 +183,12 @@ export class Path {
     }
   }
 
-  /** Resolves the `Deno.FileInfo` of this path without
-   * following symlinks. */
-  async lstat(): Promise<Deno.FileInfo | undefined> {
+  /** Resolves the file info of this path without following symlinks. */
+  async lstat(): Promise<_fs.FileInfo | undefined> {
     try {
-      return await Deno.lstat(this.#path);
+      return await _fs.lstat(this.#path);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         return undefined;
       } else {
         throw err;
@@ -187,13 +196,12 @@ export class Path {
     }
   }
 
-  /** Synchronously resolves the `Deno.FileInfo` of this path
-   * without following symlinks. */
-  lstatSync(): Deno.FileInfo | undefined {
+  /** Synchronously resolves the file info of this path without following symlinks. */
+  lstatSync(): _fs.FileInfo | undefined {
     try {
-      return Deno.lstatSync(this.#path);
+      return _fs.lstatSync(this.#path);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         return undefined;
       } else {
         throw err;
@@ -418,19 +426,19 @@ export class Path {
 
   /** Resolves to the absolute normalized path, with symbolic links resolved. */
   realPath(): Promise<Path> {
-    return Deno.realPath(this.#path).then((path) => new Path(path));
+    return _fs.realPath(this.#path).then((path) => new Path(path));
   }
 
   /** Synchronously resolves to the absolute normalized path, with symbolic links resolved. */
   realPathSync(): Path {
-    return new Path(Deno.realPathSync(this.#path));
+    return new Path(_fs.realPathSync(this.#path));
   }
 
   /** Creates a directory at this path.
    * @remarks By default, this is recursive.
    */
-  async mkdir(options?: Deno.MkdirOptions): Promise<this> {
-    await Deno.mkdir(this.#path, {
+  async mkdir(options?: _fs.MkdirOptions): Promise<this> {
+    await _fs.mkdirFn(this.#path, {
       recursive: true,
       ...options,
     });
@@ -440,8 +448,8 @@ export class Path {
   /** Synchronously creates a directory at this path.
    * @remarks By default, this is recursive.
    */
-  mkdirSync(options?: Deno.MkdirOptions): this {
-    Deno.mkdirSync(this.#path, {
+  mkdirSync(options?: _fs.MkdirOptions): this {
+    _fs.mkdirSyncFn(this.#path, {
       recursive: true,
       ...options,
     });
@@ -535,7 +543,7 @@ export class Path {
     targetPath: string | URL | Path,
   ): Promise<void> {
     const targetPathRef = ensurePath(targetPath).resolve();
-    await Deno.link(targetPathRef.toString(), this.resolve().toString());
+    await _fs.linkFn(targetPathRef.toString(), this.resolve().toString());
   }
 
   /**
@@ -545,36 +553,34 @@ export class Path {
     targetPath: string | URL | Path,
   ): void {
     const targetPathRef = ensurePath(targetPath).resolve();
-    Deno.linkSync(targetPathRef.toString(), this.resolve().toString());
+    _fs.linkSyncFn(targetPathRef.toString(), this.resolve().toString());
   }
 
   /** Reads the entries in the directory. */
   async *readDir(): AsyncIterable<DirEntry> {
     const dir = this.resolve();
-    for await (const entry of Deno.readDir(dir.#path)) {
-      yield {
-        ...entry,
-        path: dir.join(entry.name),
-      };
+    for await (const entry of _fs.readDir(dir.#path)) {
+      const out = entry as DirEntry;
+      out.path = dir.join(entry.name);
+      yield out;
     }
   }
 
   /** Synchronously reads the entries in the directory. */
   *readDirSync(): Iterable<DirEntry> {
     const dir = this.resolve();
-    for (const entry of Deno.readDirSync(dir.#path)) {
-      yield {
-        ...entry,
-        path: dir.join(entry.name),
-      };
+    for (const entry of _fs.readDirSync(dir.#path)) {
+      const out = entry as DirEntry;
+      out.path = dir.join(entry.name);
+      yield out;
     }
   }
 
   /** Reads only the directory file paths, not including symlinks. */
   async *readDirFilePaths(): AsyncIterable<Path> {
     const dir = this.resolve();
-    for await (const entry of Deno.readDir(dir.#path)) {
-      if (entry.isFile) {
+    for await (const entry of _fs.readDir(dir.#path)) {
+      if (entry.isFile()) {
         yield dir.join(entry.name);
       }
     }
@@ -583,26 +589,26 @@ export class Path {
   /** Synchronously reads only the directory file paths, not including symlinks. */
   *readDirFilePathsSync(): Iterable<Path> {
     const dir = this.resolve();
-    for (const entry of Deno.readDirSync(dir.#path)) {
-      if (entry.isFile) {
+    for (const entry of _fs.readDirSync(dir.#path)) {
+      if (entry.isFile()) {
         yield dir.join(entry.name);
       }
     }
   }
 
   /** Reads the bytes from the file. */
-  readBytes(options?: Deno.ReadFileOptions): Promise<Uint8Array> {
-    return Deno.readFile(this.#path, options);
+  readBytes(options?: _fs.ReadFileOptions): Promise<Uint8Array> {
+    return _fs.readFile(this.#path, options);
   }
 
   /** Synchronously reads the bytes from the file. */
   readBytesSync(): Uint8Array {
-    return Deno.readFileSync(this.#path);
+    return _fs.readFileSync(this.#path);
   }
 
   /** Calls `.readBytes()`, but returns undefined if the path doesn't exist. */
   readMaybeBytes(
-    options?: Deno.ReadFileOptions,
+    options?: _fs.ReadFileOptions,
   ): Promise<Uint8Array | undefined> {
     return notFoundToUndefined(() => this.readBytes(options));
   }
@@ -613,19 +619,19 @@ export class Path {
   }
 
   /** Reads the text from the file. */
-  readText(options?: Deno.ReadFileOptions): Promise<string> {
-    return Deno.readTextFile(this.#path, options);
+  readText(options?: _fs.ReadFileOptions): Promise<string> {
+    return _fs.readTextFile(this.#path, options);
   }
 
   /** Synchronously reads the text from the file. */
   readTextSync(): string {
-    return Deno.readTextFileSync(this.#path);
+    return _fs.readTextFileSync(this.#path);
   }
 
   /** Calls `.readText()`, but returns undefined when the path doesn't exist.
    * @remarks This still errors for other kinds of errors reading a file.
    */
-  readMaybeText(options?: Deno.ReadFileOptions): Promise<string | undefined> {
+  readMaybeText(options?: _fs.ReadFileOptions): Promise<string | undefined> {
     return notFoundToUndefined(() => this.readText(options));
   }
 
@@ -637,7 +643,7 @@ export class Path {
   }
 
   /** Reads and parses the file as JSON, throwing if it doesn't exist or is not valid JSON. */
-  async readJson<T>(options?: Deno.ReadFileOptions): Promise<T> {
+  async readJson<T>(options?: _fs.ReadFileOptions): Promise<T> {
     return this.#parseJson<T>(await this.readText(options));
   }
 
@@ -661,7 +667,7 @@ export class Path {
    * Calls `.readJson()`, but returns undefined if the file doesn't exist.
    * @remarks This method will still throw if the file cannot be parsed as JSON.
    */
-  readMaybeJson<T>(options?: Deno.ReadFileOptions): Promise<T | undefined> {
+  readMaybeJson<T>(options?: _fs.ReadFileOptions): Promise<T | undefined> {
     return notFoundToUndefined(() => this.readJson<T>(options));
   }
 
@@ -676,36 +682,36 @@ export class Path {
   /** Writes out the provided bytes or text to the file. */
   async write(
     data: Uint8Array,
-    options?: Deno.WriteFileOptions,
+    options?: _fs.WriteFileOptions,
   ): Promise<this> {
     await this.#withFileForWriting(options, (file) => {
-      return writeAll(file, data);
+      return writeAll(file, data, options?.signal);
     });
     return this;
   }
 
   /** Synchronously writes out the provided bytes or text to the file. */
-  writeSync(data: Uint8Array, options?: Deno.WriteFileOptions): this {
+  writeSync(data: Uint8Array, options?: _fs.WriteFileOptions): this {
     this.#withFileForWritingSync(options, (file) => {
-      writeAllSync(file, data);
+      writeAllSync(file, data, options?.signal);
     });
     return this;
   }
 
   /** Writes the provided text to this file. */
-  writeText(text: string, options?: Deno.WriteFileOptions): Promise<this> {
+  writeText(text: string, options?: _fs.WriteFileOptions): Promise<this> {
     return this.write(new TextEncoder().encode(text), options);
   }
 
   /** Synchronously writes the provided text to this file. */
-  writeTextSync(text: string, options?: Deno.WriteFileOptions): this {
+  writeTextSync(text: string, options?: _fs.WriteFileOptions): this {
     return this.writeSync(new TextEncoder().encode(text), options);
   }
 
   /** Writes out the provided object as compact JSON. */
   async writeJson(
     obj: unknown,
-    options?: Deno.WriteFileOptions,
+    options?: _fs.WriteFileOptions,
   ): Promise<this> {
     const text = JSON.stringify(obj);
     await this.writeText(text + "\n", options);
@@ -713,7 +719,7 @@ export class Path {
   }
 
   /** Synchronously writes out the provided object as compact JSON. */
-  writeJsonSync(obj: unknown, options?: Deno.WriteFileOptions): this {
+  writeJsonSync(obj: unknown, options?: _fs.WriteFileOptions): this {
     const text = JSON.stringify(obj);
     this.writeTextSync(text + "\n", options);
     return this;
@@ -722,7 +728,7 @@ export class Path {
   /** Writes out the provided object as formatted JSON. */
   async writeJsonPretty(
     obj: unknown,
-    options?: Deno.WriteFileOptions,
+    options?: _fs.WriteFileOptions,
   ): Promise<this> {
     const text = JSON.stringify(obj, undefined, 2);
     await this.writeText(text + "\n", options);
@@ -730,7 +736,7 @@ export class Path {
   }
 
   /** Synchronously writes out the provided object as formatted JSON. */
-  writeJsonPrettySync(obj: unknown, options?: Deno.WriteFileOptions): this {
+  writeJsonPrettySync(obj: unknown, options?: _fs.WriteFileOptions): this {
     const text = JSON.stringify(obj, undefined, 2);
     this.writeTextSync(text + "\n", options);
     return this;
@@ -739,19 +745,22 @@ export class Path {
   /** Appends the provided bytes to the file. */
   async append(
     data: Uint8Array,
-    options?: Omit<Deno.WriteFileOptions, "append">,
+    options?: Omit<_fs.WriteFileOptions, "append">,
   ): Promise<this> {
-    await this.#withFileForAppending(options, (file) => writeAll(file, data));
+    await this.#withFileForAppending(
+      options,
+      (file) => writeAll(file, data, options?.signal),
+    );
     return this;
   }
 
   /** Synchronously appends the provided bytes to the file. */
   appendSync(
     data: Uint8Array,
-    options?: Omit<Deno.WriteFileOptions, "append">,
+    options?: Omit<_fs.WriteFileOptions, "append">,
   ): this {
     this.#withFileForAppendingSync(options, (file) => {
-      writeAllSync(file, data);
+      writeAllSync(file, data, options?.signal);
     });
     return this;
   }
@@ -759,11 +768,11 @@ export class Path {
   /** Appends the provided text to the file. */
   async appendText(
     text: string,
-    options?: Omit<Deno.WriteFileOptions, "append">,
+    options?: Omit<_fs.WriteFileOptions, "append">,
   ): Promise<this> {
     await this.#withFileForAppending(
       options,
-      (file) => writeAll(file, new TextEncoder().encode(text)),
+      (file) => writeAll(file, new TextEncoder().encode(text), options?.signal),
     );
     return this;
   }
@@ -771,17 +780,17 @@ export class Path {
   /** Synchronously appends the provided text to the file. */
   appendTextSync(
     text: string,
-    options?: Omit<Deno.WriteFileOptions, "append">,
+    options?: Omit<_fs.WriteFileOptions, "append">,
   ): this {
     this.#withFileForAppendingSync(options, (file) => {
-      writeAllSync(file, new TextEncoder().encode(text));
+      writeAllSync(file, new TextEncoder().encode(text), options?.signal);
     });
     return this;
   }
 
   #withFileForAppending<T>(
-    options: Omit<Deno.WriteFileOptions, "append"> | undefined,
-    action: (file: Deno.FsFile) => Promise<T>,
+    options: Omit<_fs.WriteFileOptions, "append"> | undefined,
+    action: (file: _fs.FsFile) => Promise<T>,
   ) {
     return this.#withFileForWriting({
       append: true,
@@ -790,8 +799,8 @@ export class Path {
   }
 
   async #withFileForWriting<T>(
-    options: Deno.WriteFileOptions | undefined,
-    action: (file: Deno.FsFile) => Promise<T>,
+    options: _fs.WriteFileOptions | undefined,
+    action: (file: _fs.FsFile) => Promise<T>,
   ) {
     const file = await this.#openFileMaybeCreatingDirectory({
       write: true,
@@ -811,12 +820,12 @@ export class Path {
   }
 
   /** Opens a file, but handles if the directory does not exist. */
-  async #openFileMaybeCreatingDirectory(options: Deno.OpenOptions) {
+  async #openFileMaybeCreatingDirectory(options: _fs.OpenOptions) {
     const resolvedPath = this.resolve(); // pre-resolve before going async in case the cwd changes
     try {
       return await resolvedPath.open(options);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         // attempt to create the parent directory when it doesn't exist
         const parent = resolvedPath.parent();
         if (parent != null) {
@@ -834,8 +843,8 @@ export class Path {
   }
 
   #withFileForAppendingSync<T>(
-    options: Omit<Deno.WriteFileOptions, "append"> | undefined,
-    action: (file: Deno.FsFile) => T,
+    options: Omit<_fs.WriteFileOptions, "append"> | undefined,
+    action: (file: _fs.FsFile) => T,
   ) {
     return this.#withFileForWritingSync({
       append: true,
@@ -844,8 +853,8 @@ export class Path {
   }
 
   #withFileForWritingSync<T>(
-    options: Deno.WriteFileOptions | undefined,
-    action: (file: Deno.FsFile) => T,
+    options: _fs.WriteFileOptions | undefined,
+    action: (file: _fs.FsFile) => T,
   ) {
     const file = this.#openFileForWritingSync(options);
     try {
@@ -860,7 +869,7 @@ export class Path {
   }
 
   /** Opens a file for writing, but handles if the directory does not exist. */
-  #openFileForWritingSync(options: Deno.WriteFileOptions | undefined) {
+  #openFileForWritingSync(options: _fs.WriteFileOptions | undefined) {
     return this.#openFileMaybeCreatingDirectorySync({
       write: true,
       create: true,
@@ -870,11 +879,11 @@ export class Path {
   }
 
   /** Opens a file for writing, but handles if the directory does not exist. */
-  #openFileMaybeCreatingDirectorySync(options: Deno.OpenOptions) {
+  #openFileMaybeCreatingDirectorySync(options: _fs.OpenOptions) {
     try {
       return this.openSync(options);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         // attempt to create the parent directory when it doesn't exist
         const parent = this.resolve().parent();
         if (parent != null) {
@@ -893,37 +902,37 @@ export class Path {
 
   /** Changes the permissions of the file or directory. */
   async chmod(mode: number): Promise<this> {
-    await Deno.chmod(this.#path, mode);
+    await _fs.chmod(this.#path, mode);
     return this;
   }
 
   /** Synchronously changes the permissions of the file or directory. */
   chmodSync(mode: number): this {
-    Deno.chmodSync(this.#path, mode);
+    _fs.chmodSync(this.#path, mode);
     return this;
   }
 
   /** Changes the ownership permissions of the file. */
   async chown(uid: number | null, gid: number | null): Promise<this> {
-    await Deno.chown(this.#path, uid, gid);
+    await _fs.chown(this.#path, uid, gid);
     return this;
   }
 
   /** Synchronously changes the ownership permissions of the file. */
   chownSync(uid: number | null, gid: number | null): this {
-    Deno.chownSync(this.#path, uid, gid);
+    _fs.chownSync(this.#path, uid, gid);
     return this;
   }
 
   /** Creates a new file or opens the existing one. */
   create(): Promise<FsFileWrapper> {
-    return Deno.create(this.#path)
+    return _fs.createFile(this.#path)
       .then((file) => createFsFileWrapper(file));
   }
 
   /** Synchronously creates a new file or opens the existing one. */
   createSync(): FsFileWrapper {
-    return createFsFileWrapper(Deno.createSync(this.#path));
+    return createFsFileWrapper(_fs.createFileSync(this.#path));
   }
 
   /** Creates a file throwing if a file previously existed. */
@@ -945,36 +954,36 @@ export class Path {
   }
 
   /** Opens a file. */
-  open(options?: Deno.OpenOptions): Promise<FsFileWrapper> {
-    return Deno.open(this.#path, options)
+  open(options?: _fs.OpenOptions): Promise<FsFileWrapper> {
+    return _fs.openFile(this.#path, options)
       .then((file) => createFsFileWrapper(file));
   }
 
   /** Opens a file synchronously. */
-  openSync(options?: Deno.OpenOptions): FsFileWrapper {
-    return createFsFileWrapper(Deno.openSync(this.#path, options));
+  openSync(options?: _fs.OpenOptions): FsFileWrapper {
+    return createFsFileWrapper(_fs.openFileSync(this.#path, options));
   }
 
   /** Removes the file or directory from the file system. */
-  async remove(options?: Deno.RemoveOptions): Promise<this> {
-    await Deno.remove(this.#path, options);
+  async remove(options?: _fs.RemoveOptions): Promise<this> {
+    await _fs.remove(this.#path, options);
     return this;
   }
 
   /** Removes the file or directory from the file system synchronously. */
-  removeSync(options?: Deno.RemoveOptions): this {
-    Deno.removeSync(this.#path, options);
+  removeSync(options?: _fs.RemoveOptions): this {
+    _fs.removeSync(this.#path, options);
     return this;
   }
 
   /** Removes the file or directory from the file system, but doesn't throw
    * when the file doesn't exist.
    */
-  async ensureRemove(options?: Deno.RemoveOptions): Promise<this> {
+  async ensureRemove(options?: _fs.RemoveOptions): Promise<this> {
     try {
       return await this.remove(options);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         return this;
       } else {
         throw err;
@@ -985,11 +994,11 @@ export class Path {
   /** Removes the file or directory from the file system, but doesn't throw
    * when the file doesn't exist.
    */
-  ensureRemoveSync(options?: Deno.RemoveOptions): this {
+  ensureRemoveSync(options?: _fs.RemoveOptions): this {
     try {
       return this.removeSync(options);
     } catch (err) {
-      if (err instanceof Deno.errors.NotFound) {
+      if (_fs.isNotFoundError(err)) {
         return this;
       } else {
         throw err;
@@ -1004,13 +1013,13 @@ export class Path {
    * The directory itself is not deleted.
    */
   async emptyDir(): Promise<this> {
-    await emptyDir(this.toString());
+    await _fs.emptyDir(this.toString());
     return this;
   }
 
   /** Synchronous version of `emptyDir()` */
   emptyDirSync(): this {
-    emptyDirSync(this.toString());
+    _fs.emptyDirSync(this.toString());
     return this;
   }
 
@@ -1018,7 +1027,7 @@ export class Path {
    * If the directory structure does not exist, it is created. Like mkdir -p.
    */
   async ensureDir(): Promise<this> {
-    await ensureDir(this.toString());
+    await _fs.ensureDir(this.toString());
     return this;
   }
 
@@ -1026,7 +1035,7 @@ export class Path {
    * If the directory structure does not exist, it is created. Like mkdir -p.
    */
   ensureDirSync(): this {
-    ensureDirSync(this.toString());
+    _fs.ensureDirSync(this.toString());
     return this;
   }
 
@@ -1037,7 +1046,7 @@ export class Path {
    * it is NOTMODIFIED.
    */
   async ensureFile(): Promise<this> {
-    await ensureFile(this.toString());
+    await _fs.ensureFile(this.toString());
     return this;
   }
 
@@ -1048,7 +1057,7 @@ export class Path {
    * it is NOTMODIFIED.
    */
   ensureFileSync(): this {
-    ensureFileSync(this.toString());
+    _fs.ensureFileSync(this.toString());
     return this;
   }
 
@@ -1060,7 +1069,7 @@ export class Path {
     options?: { overwrite?: boolean },
   ): Promise<Path> {
     const pathRef = ensurePath(destinationPath);
-    await copy(this.#path, pathRef.toString(), options);
+    await _fs.copy(this.#path, pathRef.toString(), options);
     return pathRef;
   }
 
@@ -1072,7 +1081,7 @@ export class Path {
     options?: { overwrite?: boolean },
   ): Path {
     const pathRef = ensurePath(destinationPath);
-    copySync(this.#path, pathRef.toString(), options);
+    _fs.copySync(this.#path, pathRef.toString(), options);
     return pathRef;
   }
 
@@ -1108,7 +1117,7 @@ export class Path {
    */
   copyFile(destinationPath: string | URL | Path): Promise<Path> {
     const pathRef = ensurePath(destinationPath);
-    return Deno.copyFile(this.#path, pathRef.toString())
+    return _fs.copyFileFn(this.#path, pathRef.toString())
       .then(() => pathRef);
   }
 
@@ -1118,7 +1127,7 @@ export class Path {
    */
   copyFileSync(destinationPath: string | URL | Path): Path {
     const pathRef = ensurePath(destinationPath);
-    Deno.copyFileSync(this.#path, pathRef.toString());
+    _fs.copyFileSyncFn(this.#path, pathRef.toString());
     return pathRef;
   }
 
@@ -1149,7 +1158,7 @@ export class Path {
    */
   rename(newPath: string | URL | Path): Promise<Path> {
     const pathRef = ensurePath(newPath);
-    return Deno.rename(this.#path, pathRef.toString()).then(() => pathRef);
+    return _fs.renameFn(this.#path, pathRef.toString()).then(() => pathRef);
   }
 
   /**
@@ -1158,7 +1167,7 @@ export class Path {
    */
   renameSync(newPath: string | URL | Path): Path {
     const pathRef = ensurePath(newPath);
-    Deno.renameSync(this.#path, pathRef.toString());
+    _fs.renameSyncFn(this.#path, pathRef.toString());
     return pathRef;
   }
 
@@ -1187,7 +1196,7 @@ export class Path {
     dest: WritableStream<Uint8Array>,
     options?: StreamPipeOptions,
   ): Promise<this> {
-    const file = await Deno.open(this.#path, { read: true });
+    const file = await _fs.openFile(this.#path, { read: true });
     try {
       await file.readable.pipeTo(dest, options);
     } finally {
@@ -1205,13 +1214,13 @@ function ensurePath(path: string | URL | Path) {
   return path instanceof Path ? path : new Path(path);
 }
 
-function createFsFileWrapper(file: Deno.FsFile): FsFileWrapper {
+function createFsFileWrapper(file: _fs.FsFile): FsFileWrapper {
   Object.setPrototypeOf(file, FsFileWrapper.prototype);
   return file as FsFileWrapper;
 }
 
-/** Wrapper around `Deno.FsFile` that has more helper methods. */
-export class FsFileWrapper extends Deno.FsFile {
+/** Wrapper around `FsFile` that has more helper methods. */
+export class FsFileWrapper extends _fs.FsFile {
   /** Writes the provided text to this file. */
   writeText(text: string): Promise<this> {
     return this.writeBytes(new TextEncoder().encode(text));
@@ -1237,21 +1246,21 @@ export class FsFileWrapper extends Deno.FsFile {
 
 async function createSymlink(opts: CreateSymlinkOpts) {
   let kind = opts.type;
-  if (kind == null && Deno.build.os === "windows") {
+  if (kind == null && _fs.isWindows()) {
     const info = await opts.targetPath.lstat();
-    if (info?.isDirectory) {
+    if (info?.isDirectory()) {
       kind = "dir";
-    } else if (info?.isFile) {
+    } else if (info?.isFile()) {
       kind = "file";
     } else {
-      throw new Deno.errors.NotFound(
+      throw _fs.createNotFoundError(
         `The target path '${opts.targetPath}' did not exist or path kind could not be determined. ` +
           `When the path doesn't exist, you need to specify a symlink type on Windows.`,
       );
     }
   }
 
-  await Deno.symlink(
+  await _fs.symlinkFn(
     opts.text,
     opts.fromPath.toString(),
     kind == null ? undefined : {
@@ -1269,21 +1278,21 @@ interface CreateSymlinkOpts {
 
 function createSymlinkSync(opts: CreateSymlinkOpts) {
   let kind = opts.type;
-  if (kind == null && Deno.build.os === "windows") {
+  if (kind == null && _fs.isWindows()) {
     const info = opts.targetPath.lstatSync();
-    if (info?.isDirectory) {
+    if (info?.isDirectory()) {
       kind = "dir";
-    } else if (info?.isFile) {
+    } else if (info?.isFile()) {
       kind = "file";
     } else {
-      throw new Deno.errors.NotFound(
+      throw _fs.createNotFoundError(
         `The target path '${opts.targetPath}' did not exist or path kind could not be determined. ` +
           `When the path doesn't exist, you need to specify a symlink type on Windows.`,
       );
     }
   }
 
-  Deno.symlinkSync(
+  _fs.symlinkSyncFn(
     opts.text,
     opts.fromPath.toString(),
     kind == null ? undefined : {
@@ -1296,7 +1305,7 @@ async function notFoundToUndefined<T>(action: () => Promise<T>) {
   try {
     return await action();
   } catch (err) {
-    if (err instanceof Deno.errors.NotFound) {
+    if (_fs.isNotFoundError(err)) {
       return undefined;
     } else {
       throw err;
@@ -1308,7 +1317,7 @@ function notFoundToUndefinedSync<T>(action: () => T) {
   try {
     return action();
   } catch (err) {
-    if (err instanceof Deno.errors.NotFound) {
+    if (_fs.isNotFoundError(err)) {
       return undefined;
     } else {
       throw err;
@@ -1319,9 +1328,11 @@ function notFoundToUndefinedSync<T>(action: () => T) {
 async function writeAll(
   writer: { write(data: Uint8Array): Promise<number> },
   data: Uint8Array,
+  signal?: AbortSignal,
 ) {
   let nwritten = 0;
   while (nwritten < data.length) {
+    signal?.throwIfAborted();
     nwritten += await writer.write(data.subarray(nwritten));
   }
 }
@@ -1329,9 +1340,11 @@ async function writeAll(
 function writeAllSync(
   writer: { writeSync(data: Uint8Array): number },
   data: Uint8Array,
+  signal?: AbortSignal,
 ) {
   let nwritten = 0;
   while (nwritten < data.length) {
+    signal?.throwIfAborted();
     nwritten += writer.writeSync(data.subarray(nwritten));
   }
 }

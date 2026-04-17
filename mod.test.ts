@@ -618,6 +618,48 @@ test("readMaybeText", async () => {
   });
 });
 
+test("lines", async () => {
+  await withTempDir(async () => {
+    const file = new Path("file.txt");
+
+    // trailing newline is not a blank line
+    file.writeSync("a\nb\n");
+    assertEquals(await file.lines(), ["a", "b"]);
+    assertEquals(file.linesSync(), ["a", "b"]);
+
+    // no trailing newline
+    file.writeSync("a\nb");
+    assertEquals(file.linesSync(), ["a", "b"]);
+
+    // \r\n line endings
+    file.writeSync("a\r\nb\r\n");
+    assertEquals(file.linesSync(), ["a", "b"]);
+
+    // embedded blank lines are preserved
+    file.writeSync("a\n\nb");
+    assertEquals(file.linesSync(), ["a", "", "b"]);
+
+    // double trailing newline drops only one
+    file.writeSync("a\n\n");
+    assertEquals(file.linesSync(), ["a", ""]);
+
+    // standalone \r is part of the line
+    file.writeSync("a\rb\n");
+    assertEquals(file.linesSync(), ["a\rb"]);
+
+    // empty file
+    file.writeSync("");
+    assertEquals(file.linesSync(), []);
+
+    // iterator variants
+    file.writeSync("a\nb\n");
+    const asyncLines = [];
+    for await (const line of file.linesIter()) asyncLines.push(line);
+    assertEquals(asyncLines, ["a", "b"]);
+    assertEquals(Array.from(file.linesIterSync()), ["a", "b"]);
+  });
+});
+
 test("readJson", async () => {
   await withTempDir(async () => {
     const file = new Path("file.txt");

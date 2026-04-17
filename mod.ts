@@ -642,6 +642,42 @@ export class Path {
     return notFoundToUndefinedSync(() => this.readTextSync());
   }
 
+  /** Reads the file's text and returns an array of its lines.
+   *
+   * Lines are split at `\n` or `\r\n`. Line terminators are not included.
+   * A trailing blank line caused by a final line ending is excluded (matches
+   * [Rust's `str::lines`](https://doc.rust-lang.org/std/primitive.str.html#method.lines)).
+   */
+  async lines(options?: _fs.ReadFileOptions): Promise<string[]> {
+    return splitLines(await this.readText(options));
+  }
+
+  /** Synchronously reads the file's text and returns an array of its lines.
+   *
+   * See `.lines()` for the splitting semantics.
+   */
+  linesSync(): string[] {
+    return splitLines(this.readTextSync());
+  }
+
+  /** Reads the file's text and iterates over its lines.
+   *
+   * See `.lines()` for the splitting semantics.
+   */
+  async *linesIter(
+    options?: _fs.ReadFileOptions,
+  ): AsyncIterableIterator<string> {
+    yield* splitLines(await this.readText(options));
+  }
+
+  /** Synchronously reads the file's text and iterates over its lines.
+   *
+   * See `.lines()` for the splitting semantics.
+   */
+  *linesIterSync(): IterableIterator<string> {
+    yield* splitLines(this.readTextSync());
+  }
+
   /** Reads and parses the file as JSON, throwing if it doesn't exist or is not valid JSON. */
   async readJson<T>(options?: _fs.ReadFileOptions): Promise<T> {
     return this.#parseJson<T>(await this.readText(options));
@@ -1315,4 +1351,12 @@ function writeAllSync(
     signal?.throwIfAborted();
     nwritten += writer.writeSync(data.subarray(nwritten));
   }
+}
+
+function splitLines(text: string): string[] {
+  if (text === "") return [];
+  const lines = text.split(/\r?\n/);
+  // matches Rust: trailing final line ending produces no blank line
+  if (text.endsWith("\n")) lines.pop();
+  return lines;
 }

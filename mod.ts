@@ -519,13 +519,7 @@ export class Path {
     const targetPath = ensurePath(target).resolve();
     if (opts?.kind === "relative") {
       const fromPath = this.resolve();
-      let relativePath: string;
-      if (fromPath.dirname() === targetPath.dirname()) {
-        // we don't want it to do `../basename`
-        relativePath = targetPath.basename();
-      } else {
-        relativePath = fromPath.relative(targetPath);
-      }
+      const relativePath = fromPath.parentOrThrow().relative(targetPath);
       return {
         fromPath,
         targetPath,

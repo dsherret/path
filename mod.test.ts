@@ -926,3 +926,131 @@ test("append", async () => {
     assertEquals(file.readTextSync(), "1\n2\n3\n4\n");
   });
 });
+
+test("open with create but no truncate preserves existing content", async () => {
+  await withTempDir(async () => {
+    const path = new Path("file.txt").writeTextSync("hello");
+    // { write: true, create: true } without truncate — should NOT truncate
+    const file = await path.open({ write: true, create: true });
+    await file.writeText("hi");
+    file.close();
+    // "hi" overwrites first 2 bytes, "llo" preserved
+    assertEquals(path.readTextSync(), "hillo");
+  });
+});
+
+test("open with create on missing file creates without truncate", async () => {
+  await withTempDir(() => {
+    const path = new Path("new.txt");
+    const file = path.openSync({ write: true, create: true });
+    file.writeTextSync("fresh");
+    file.close();
+    assertEquals(path.readTextSync(), "fresh");
+  });
+});
+
+test("open with truncate truncates existing file", async () => {
+  await withTempDir(() => {
+    const path = new Path("file.txt").writeTextSync("hello");
+    const file = path.openSync({ write: true, create: true, truncate: true });
+    file.writeTextSync("hi");
+    file.close();
+    assertEquals(path.readTextSync(), "hi");
+  });
+});
+
+test("open read+write roundtrip", async () => {
+  await withTempDir(() => {
+    const path = new Path("file.txt").writeTextSync("abcdef");
+    const file = path.openSync({ read: true, write: true });
+    file.writeTextSync("XYZ");
+    file.close();
+    assertEquals(path.readTextSync(), "XYZdef");
+  });
+});
+
+test("write honors AbortSignal", async () => {
+  await withTempDir(async () => {
+    const path = new Path("file.txt");
+    const controller = new AbortController();
+    controller.abort(new Error("aborted-by-test"));
+    await assertRejects(
+      () =>
+        path.write(new TextEncoder().encode("x"), {
+          signal: controller.signal,
+        }),
+      Error,
+      "aborted-by-test",
+    );
+    assertThrows(
+      () =>
+        path.writeSync(new TextEncoder().encode("x"), {
+          signal: controller.signal,
+        }),
+      Error,
+      "aborted-by-test",
+    );
+  });
+});
+
+test("append honors AbortSignal", async () => {
+  await withTempDir(async () => {
+    const path = new Path("file.txt").writeTextSync("start");
+    const controller = new AbortController();
+    controller.abort(new Error("aborted-by-test"));
+    await assertRejects(
+      () =>
+        path.append(new TextEncoder().encode("x"), {
+          signal: controller.signal,
+        }),
+      Error,
+      "aborted-by-test",
+    );
+    // file content unchanged
+    assertEquals(path.readTextSync(), "start");
+  });
+});
+
+test("readBytes honors AbortSignal", async () => {
+  await withTempDir(async () => {
+    const path = new Path("file.txt").writeTextSync("data");
+    const controller = new AbortController();
+    controller.abort(new Error("aborted-by-test"));
+    await assertRejects(
+      () => path.readBytes({ signal: controller.signal }),
+      Error,
+    );
+    await assertRejects(
+      () => path.readText({ signal: controller.signal }),
+      Error,
+    );
+  });
+});
+
+test("mkdir honors mode", async () => {
+  if (isWindows) return; // POSIX permissions are not meaningful on Windows
+  await withTempDir(async (tempDir) => {
+    const dir = tempDir.join("restricted");
+    await dir.mkdir({ mode: 0o700 });
+    const info = dir.statSync()!;
+    // mask with 0o777 since mode also encodes file type bits
+    assertEquals(info.mode & 0o777, 0o700);
+    const dir2 = tempDir.join("restricted2");
+    dir2.mkdirSync({ mode: 0o750 });
+    assertEquals(dir2.statSync()!.mode & 0o777, 0o750);
+  });
+});
+
+test("open honors mode when creating", async () => {
+  if (isWindows) return;
+  await withTempDir((tempDir) => {
+    const path = tempDir.join("perms.txt");
+    const file = path.openSync({
+      write: true,
+      create: true,
+      mode: 0o640,
+    });
+    file.close();
+    assertEquals(path.statSync()!.mode & 0o777, 0o640);
+  });
+});

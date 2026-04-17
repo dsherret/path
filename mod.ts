@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import * as _fs from "./_fs.ts";
 
 export type {
+  DirEntryInfo,
   FileInfo,
   MkdirOptions,
   OpenOptions,
@@ -31,6 +32,7 @@ export interface DirEntry extends _fs.DirEntryInfo {
 export interface SymlinkOptions {
   /** Creates the symlink as absolute or relative. */
   kind: "absolute" | "relative";
+  /** Kind of symlink to create. Required on Windows when the target doesn't exist. */
   type?: "file" | "dir" | "junction";
 }
 
@@ -689,7 +691,7 @@ export class Path {
     options?: _fs.WriteFileOptions,
   ): Promise<this> {
     await this.#withFileForWriting(options, (file) => {
-      return writeAll(file, data);
+      return writeAll(file, data, options?.signal);
     });
     return this;
   }
@@ -697,7 +699,7 @@ export class Path {
   /** Synchronously writes out the provided bytes or text to the file. */
   writeSync(data: Uint8Array, options?: _fs.WriteFileOptions): this {
     this.#withFileForWritingSync(options, (file) => {
-      writeAllSync(file, data);
+      writeAllSync(file, data, options?.signal);
     });
     return this;
   }
@@ -751,7 +753,10 @@ export class Path {
     data: Uint8Array,
     options?: Omit<_fs.WriteFileOptions, "append">,
   ): Promise<this> {
-    await this.#withFileForAppending(options, (file) => writeAll(file, data));
+    await this.#withFileForAppending(
+      options,
+      (file) => writeAll(file, data, options?.signal),
+    );
     return this;
   }
 
@@ -761,7 +766,7 @@ export class Path {
     options?: Omit<_fs.WriteFileOptions, "append">,
   ): this {
     this.#withFileForAppendingSync(options, (file) => {
-      writeAllSync(file, data);
+      writeAllSync(file, data, options?.signal);
     });
     return this;
   }
@@ -773,7 +778,7 @@ export class Path {
   ): Promise<this> {
     await this.#withFileForAppending(
       options,
-      (file) => writeAll(file, new TextEncoder().encode(text)),
+      (file) => writeAll(file, new TextEncoder().encode(text), options?.signal),
     );
     return this;
   }
@@ -784,7 +789,7 @@ export class Path {
     options?: Omit<_fs.WriteFileOptions, "append">,
   ): this {
     this.#withFileForAppendingSync(options, (file) => {
-      writeAllSync(file, new TextEncoder().encode(text));
+      writeAllSync(file, new TextEncoder().encode(text), options?.signal);
     });
     return this;
   }
@@ -1329,9 +1334,11 @@ function notFoundToUndefinedSync<T>(action: () => T) {
 async function writeAll(
   writer: { write(data: Uint8Array): Promise<number> },
   data: Uint8Array,
+  signal?: AbortSignal,
 ) {
   let nwritten = 0;
   while (nwritten < data.length) {
+    signal?.throwIfAborted();
     nwritten += await writer.write(data.subarray(nwritten));
   }
 }
@@ -1339,9 +1346,11 @@ async function writeAll(
 function writeAllSync(
   writer: { writeSync(data: Uint8Array): number },
   data: Uint8Array,
+  signal?: AbortSignal,
 ) {
   let nwritten = 0;
   while (nwritten < data.length) {
+    signal?.throwIfAborted();
     nwritten += writer.writeSync(data.subarray(nwritten));
   }
 }

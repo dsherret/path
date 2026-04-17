@@ -4,57 +4,95 @@ import { dirname, join } from "node:path";
 
 /** Information about a file or directory. Shape matches `node:fs` `Stats`. */
 export interface FileInfo {
+  /** True if this is info about a regular file. */
   isFile(): boolean;
+  /** True if this is info about a directory. */
   isDirectory(): boolean;
+  /** True if this is info about a symbolic link. */
   isSymbolicLink(): boolean;
+  /** Size of the file in bytes. */
   size: number;
+  /** Last modified time. */
   mtime: Date;
+  /** Last access time. */
   atime: Date;
+  /** Creation time. */
   birthtime: Date;
+  /** Numeric identifier of the device containing the file. */
   dev: number;
+  /** File system specific inode number. */
   ino: number;
+  /** File type and mode. */
   mode: number;
+  /** Number of hard links. */
   nlink: number;
+  /** User ID of the file's owner. */
   uid: number;
+  /** Group ID of the file's owner. */
   gid: number;
 }
 
 /** A directory entry returned by readDir. Shape matches `node:fs` `Dirent`. */
 export interface DirEntryInfo {
+  /** Name of this entry (not the full path). */
   name: string;
+  /** True if this entry is a regular file. */
   isFile(): boolean;
+  /** True if this entry is a directory. */
   isDirectory(): boolean;
+  /** True if this entry is a symbolic link. */
   isSymbolicLink(): boolean;
 }
 
+/** Options for `mkdir`. */
 export interface MkdirOptions {
+  /** Create parent directories as needed (like `mkdir -p`). */
   recursive?: boolean;
+  /** Permission mode to apply to newly-created directories. */
   mode?: number;
 }
 
+/** Options for opening a file. */
 export interface OpenOptions {
+  /** Open for reading. */
   read?: boolean;
+  /** Open for writing. */
   write?: boolean;
+  /** Create the file if it doesn't exist. */
   create?: boolean;
+  /** Create the file, failing if it already exists. */
   createNew?: boolean;
+  /** Open in append mode. */
   append?: boolean;
+  /** Truncate the file to zero length if it already exists. */
   truncate?: boolean;
+  /** Permission mode to apply when creating a file. */
   mode?: number;
 }
 
+/** Options for writing to a file. */
 export interface WriteFileOptions {
+  /** Append to the file instead of overwriting. */
   append?: boolean;
+  /** Create the file if it doesn't exist. */
   create?: boolean;
+  /** Create the file, failing if it already exists. */
   createNew?: boolean;
+  /** Permission mode to apply when creating a file. */
   mode?: number;
+  /** Abort the write when the signal is triggered. */
   signal?: AbortSignal;
 }
 
+/** Options for removing a file or directory. */
 export interface RemoveOptions {
+  /** Recursively remove directory contents. */
   recursive?: boolean;
 }
 
+/** Options for reading a file. */
 export interface ReadFileOptions {
+  /** Abort the read when the signal is triggered. */
   signal?: AbortSignal;
 }
 
@@ -87,6 +125,7 @@ export class FsFile {
     this._fd = fd;
   }
 
+  /** Writes bytes to the file, resolving to the number of bytes written. */
   write(data: Uint8Array): Promise<number> {
     return new Promise<number>((resolve, reject) => {
       fs.write(
@@ -103,14 +142,17 @@ export class FsFile {
     });
   }
 
+  /** Synchronously writes bytes to the file, returning the number of bytes written. */
   writeSync(data: Uint8Array): number {
     return fs.writeSync(this._fd, data, 0, data.length);
   }
 
+  /** Closes the file handle. */
   close(): void {
     fs.closeSync(this._fd);
   }
 
+  /** A writable stream that writes to this file. */
   get writable(): WritableStream<Uint8Array> {
     const fd = this._fd;
     return new WritableStream({
@@ -125,6 +167,7 @@ export class FsFile {
     });
   }
 
+  /** A readable stream that reads from this file. */
   get readable(): ReadableStream<Uint8Array> {
     const fd = this._fd;
     return new ReadableStream({
@@ -515,17 +558,19 @@ function lstatOrUndefinedSync(path: string): FileInfo | undefined {
   }
 }
 
-function openOptionsToFlags(options?: OpenOptions): string {
-  if (!options) return "r";
+function openOptionsToFlags(options?: OpenOptions): number {
+  const C = fs.constants;
+  if (!options) return C.O_RDONLY;
   const { read, write, append, truncate, create, createNew } = options;
-  if (createNew) {
-    if (append) return read ? "ax+" : "ax";
-    return read ? "wx+" : "wx";
-  }
-  if (append) return read ? "a+" : "a";
-  if (write) {
-    if (truncate || create) return read ? "w+" : "w";
-    return "r+";
-  }
-  return "r";
+  // createNew / create / append imply write unless read was explicitly requested too
+  const needsWrite = write || append || create || createNew;
+  let flags: number;
+  if (read && needsWrite) flags = C.O_RDWR;
+  else if (needsWrite) flags = C.O_WRONLY;
+  else flags = C.O_RDONLY;
+  if (append) flags |= C.O_APPEND;
+  if (truncate) flags |= C.O_TRUNC;
+  if (createNew) flags |= C.O_CREAT | C.O_EXCL;
+  else if (create) flags |= C.O_CREAT;
+  return flags;
 }

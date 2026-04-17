@@ -679,33 +679,38 @@ export class Path {
     return notFoundToUndefinedSync(() => this.readJsonSync<T>());
   }
 
-  /** Writes out the provided bytes or text to the file. */
+  /** Writes out the provided bytes or text to the file.
+   *
+   * Strings are encoded as UTF-8.
+   */
   async write(
-    data: Uint8Array,
+    data: string | Uint8Array,
     options?: _fs.WriteFileOptions,
   ): Promise<this> {
+    const bytes = typeof data === "string"
+      ? new TextEncoder().encode(data)
+      : data;
     await this.#withFileForWriting(options, (file) => {
-      return writeAll(file, data, options?.signal);
+      return writeAll(file, bytes, options?.signal);
     });
     return this;
   }
 
-  /** Synchronously writes out the provided bytes or text to the file. */
-  writeSync(data: Uint8Array, options?: _fs.WriteFileOptions): this {
+  /** Synchronously writes out the provided bytes or text to the file.
+   *
+   * Strings are encoded as UTF-8.
+   */
+  writeSync(
+    data: string | Uint8Array,
+    options?: _fs.WriteFileOptions,
+  ): this {
+    const bytes = typeof data === "string"
+      ? new TextEncoder().encode(data)
+      : data;
     this.#withFileForWritingSync(options, (file) => {
-      writeAllSync(file, data, options?.signal);
+      writeAllSync(file, bytes, options?.signal);
     });
     return this;
-  }
-
-  /** Writes the provided text to this file. */
-  writeText(text: string, options?: _fs.WriteFileOptions): Promise<this> {
-    return this.write(new TextEncoder().encode(text), options);
-  }
-
-  /** Synchronously writes the provided text to this file. */
-  writeTextSync(text: string, options?: _fs.WriteFileOptions): this {
-    return this.writeSync(new TextEncoder().encode(text), options);
   }
 
   /** Writes out the provided object as compact JSON. */
@@ -713,15 +718,13 @@ export class Path {
     obj: unknown,
     options?: _fs.WriteFileOptions,
   ): Promise<this> {
-    const text = JSON.stringify(obj);
-    await this.writeText(text + "\n", options);
+    await this.write(JSON.stringify(obj) + "\n", options);
     return this;
   }
 
   /** Synchronously writes out the provided object as compact JSON. */
   writeJsonSync(obj: unknown, options?: _fs.WriteFileOptions): this {
-    const text = JSON.stringify(obj);
-    this.writeTextSync(text + "\n", options);
+    this.writeSync(JSON.stringify(obj) + "\n", options);
     return this;
   }
 
@@ -730,60 +733,47 @@ export class Path {
     obj: unknown,
     options?: _fs.WriteFileOptions,
   ): Promise<this> {
-    const text = JSON.stringify(obj, undefined, 2);
-    await this.writeText(text + "\n", options);
+    await this.write(JSON.stringify(obj, undefined, 2) + "\n", options);
     return this;
   }
 
   /** Synchronously writes out the provided object as formatted JSON. */
   writeJsonPrettySync(obj: unknown, options?: _fs.WriteFileOptions): this {
-    const text = JSON.stringify(obj, undefined, 2);
-    this.writeTextSync(text + "\n", options);
+    this.writeSync(JSON.stringify(obj, undefined, 2) + "\n", options);
     return this;
   }
 
-  /** Appends the provided bytes to the file. */
+  /** Appends the provided bytes or text to the file.
+   *
+   * Strings are encoded as UTF-8.
+   */
   async append(
-    data: Uint8Array,
+    data: string | Uint8Array,
     options?: Omit<_fs.WriteFileOptions, "append">,
   ): Promise<this> {
+    const bytes = typeof data === "string"
+      ? new TextEncoder().encode(data)
+      : data;
     await this.#withFileForAppending(
       options,
-      (file) => writeAll(file, data, options?.signal),
+      (file) => writeAll(file, bytes, options?.signal),
     );
     return this;
   }
 
-  /** Synchronously appends the provided bytes to the file. */
+  /** Synchronously appends the provided bytes or text to the file.
+   *
+   * Strings are encoded as UTF-8.
+   */
   appendSync(
-    data: Uint8Array,
+    data: string | Uint8Array,
     options?: Omit<_fs.WriteFileOptions, "append">,
   ): this {
+    const bytes = typeof data === "string"
+      ? new TextEncoder().encode(data)
+      : data;
     this.#withFileForAppendingSync(options, (file) => {
-      writeAllSync(file, data, options?.signal);
-    });
-    return this;
-  }
-
-  /** Appends the provided text to the file. */
-  async appendText(
-    text: string,
-    options?: Omit<_fs.WriteFileOptions, "append">,
-  ): Promise<this> {
-    await this.#withFileForAppending(
-      options,
-      (file) => writeAll(file, new TextEncoder().encode(text), options?.signal),
-    );
-    return this;
-  }
-
-  /** Synchronously appends the provided text to the file. */
-  appendTextSync(
-    text: string,
-    options?: Omit<_fs.WriteFileOptions, "append">,
-  ): this {
-    this.#withFileForAppendingSync(options, (file) => {
-      writeAllSync(file, new TextEncoder().encode(text), options?.signal);
+      writeAllSync(file, bytes, options?.signal);
     });
     return this;
   }
@@ -1219,30 +1209,8 @@ function createFsFileWrapper(file: _fs.FsFile): FsFileWrapper {
   return file as FsFileWrapper;
 }
 
-/** Wrapper around `FsFile` that has more helper methods. */
-export class FsFileWrapper extends _fs.FsFile {
-  /** Writes the provided text to this file. */
-  writeText(text: string): Promise<this> {
-    return this.writeBytes(new TextEncoder().encode(text));
-  }
-
-  /** Synchronously writes the provided text to this file. */
-  writeTextSync(text: string): this {
-    return this.writeBytesSync(new TextEncoder().encode(text));
-  }
-
-  /** Writes the provided bytes to the file. */
-  async writeBytes(bytes: Uint8Array): Promise<this> {
-    await writeAll(this, bytes);
-    return this;
-  }
-
-  /** Synchronously writes the provided bytes to the file. */
-  writeBytesSync(bytes: Uint8Array): this {
-    writeAllSync(this, bytes);
-    return this;
-  }
-}
+/** A handle to an open file. */
+export class FsFileWrapper extends _fs.FsFile {}
 
 async function createSymlink(opts: CreateSymlinkOpts) {
   let kind = opts.type;

@@ -125,14 +125,20 @@ export class FsFile {
     this._fd = fd;
   }
 
-  /** Writes bytes to the file, resolving to the number of bytes written. */
-  write(data: Uint8Array): Promise<number> {
+  /** Writes data to the file, resolving to the number of bytes written.
+   *
+   * Strings are encoded as UTF-8.
+   */
+  write(data: string | Uint8Array): Promise<number> {
+    const bytes = typeof data === "string"
+      ? new TextEncoder().encode(data)
+      : data;
     return new Promise<number>((resolve, reject) => {
       fs.write(
         this._fd,
-        data,
+        bytes,
         0,
-        data.length,
+        bytes.length,
         null,
         (err, written: number) => {
           if (err) reject(err);
@@ -142,9 +148,15 @@ export class FsFile {
     });
   }
 
-  /** Synchronously writes bytes to the file, returning the number of bytes written. */
-  writeSync(data: Uint8Array): number {
-    return fs.writeSync(this._fd, data, 0, data.length);
+  /** Synchronously writes data to the file, returning the number of bytes written.
+   *
+   * Strings are encoded as UTF-8.
+   */
+  writeSync(data: string | Uint8Array): number {
+    const bytes = typeof data === "string"
+      ? new TextEncoder().encode(data)
+      : data;
+    return fs.writeSync(this._fd, bytes, 0, bytes.length);
   }
 
   /** Closes the file handle. */

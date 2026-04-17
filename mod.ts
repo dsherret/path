@@ -519,7 +519,7 @@ export class Path {
     const targetPath = ensurePath(target).resolve();
     if (opts?.kind === "relative") {
       const fromPath = this.resolve();
-      const relativePath = fromPath.parent()!.relative(targetPath);
+      const relativePath = fromPath.parentOrThrow().relative(targetPath);
       return {
         fromPath,
         targetPath,

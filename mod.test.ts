@@ -1,3 +1,5 @@
+import { readlinkSync } from "node:fs";
+import { readlink } from "node:fs/promises";
 import * as stdPath from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -446,6 +448,64 @@ test("symlinkToSync", async () => {
       Error,
       "Please specify if this symlink is absolute or relative. Otherwise provide the target text.",
     );
+  });
+});
+
+test("symlinkTo relative between sibling directories (issue #8)", async () => {
+  await withTempDir(async (tempDir) => {
+    const dirA = tempDir.join("a").mkdirSync();
+    const dirB = tempDir.join("b").mkdirSync();
+    const fileA = dirA.join("a.txt").writeTextSync("hello");
+    const symlinkAtB = dirB.join("b.txt");
+
+    await symlinkAtB.symlinkTo(fileA, { kind: "relative" });
+    // the symlink must actually resolve to the target file
+    assertEquals(symlinkAtB.readTextSync(), "hello");
+    // and the stored target text must be the dir-relative path
+    const target = await readlink(symlinkAtB.toString());
+    assertEquals(target, stdPath.join("..", "a", "a.txt"));
+  });
+});
+
+test("symlinkToSync relative between sibling directories (issue #8)", async () => {
+  await withTempDir((tempDir) => {
+    const dirA = tempDir.join("a").mkdirSync();
+    const dirB = tempDir.join("b").mkdirSync();
+    const fileA = dirA.join("a.txt").writeTextSync("hello");
+    const symlinkAtB = dirB.join("b.txt");
+
+    symlinkAtB.symlinkToSync(fileA, { kind: "relative" });
+    assertEquals(symlinkAtB.readTextSync(), "hello");
+    assertEquals(
+      readlinkSync(symlinkAtB.toString()),
+      stdPath.join("..", "a", "a.txt"),
+    );
+  });
+});
+
+test("symlinkTo relative across deeper directory structures", async () => {
+  await withTempDir((tempDir) => {
+    tempDir.join("x/y/z").mkdirSync({ recursive: true });
+    tempDir.join("other").mkdirSync();
+    const target = tempDir.join("other/target.txt").writeTextSync("data");
+    const link = tempDir.join("x/y/z/link.txt");
+
+    link.symlinkToSync(target, { kind: "relative" });
+    assertEquals(link.readTextSync(), "data");
+    assertEquals(
+      readlinkSync(link.toString()),
+      stdPath.join("..", "..", "..", "other", "target.txt"),
+    );
+  });
+});
+
+test("symlinkTo relative within same directory stores just the basename", async () => {
+  await withTempDir((tempDir) => {
+    const target = tempDir.join("target.txt").writeTextSync("data");
+    const link = tempDir.join("link.txt");
+
+    link.symlinkToSync(target, { kind: "relative" });
+    assertEquals(readlinkSync(link.toString()), "target.txt");
   });
 });
 

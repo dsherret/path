@@ -57,7 +57,7 @@ test("isDir", async () => {
   await withTempDir((dir) => {
     assert(dir.isDirSync());
     const file = dir.join("mod.ts");
-    file.writeTextSync("");
+    file.writeSync("");
     assert(!file.isDirSync());
     assert(!dir.join("nonExistent").isDirSync());
   });
@@ -66,7 +66,7 @@ test("isDir", async () => {
 test("isFile", async () => {
   await withTempDir((dir) => {
     const file = dir.join("mod.ts");
-    file.writeTextSync("");
+    file.writeSync("");
     assert(!dir.isFileSync());
     assert(file.isFileSync());
     assert(!dir.join("nonExistent").isFileSync());
@@ -75,7 +75,7 @@ test("isFile", async () => {
 
 test("isSymlink", async () => {
   await withTempDir(() => {
-    const file = new Path("file.txt").writeTextSync("");
+    const file = new Path("file.txt").writeSync("");
     const symlinkFile = new Path("test.txt");
     symlinkFile.symlinkToSync(file, { kind: "absolute" });
     assert(symlinkFile.isSymlinkSync());
@@ -232,7 +232,7 @@ test("stat", async () => {
     assertEquals(stat1?.isDirectory(), true);
     const stat2 = await new Path("nonExistent").stat();
     assertEquals(stat2, undefined);
-    const tempFile = new Path("temp.txt").writeTextSync("");
+    const tempFile = new Path("temp.txt").writeSync("");
     const symlinkFile = new Path("other.txt");
     await symlinkFile.symlinkTo(tempFile, { kind: "absolute" });
     const stat3 = await symlinkFile.stat();
@@ -249,7 +249,7 @@ test("statSync", async () => {
     const stat2 = new Path("nonExistent").statSync();
     assertEquals(stat2, undefined);
 
-    const tempFile = new Path("temp.txt").writeTextSync("");
+    const tempFile = new Path("temp.txt").writeSync("");
     const symlinkFile = new Path("other.txt");
     symlinkFile.symlinkToSync(tempFile, { kind: "absolute" });
     const stat3 = symlinkFile.statSync();
@@ -267,7 +267,7 @@ test("lstat", async () => {
     assertEquals(stat2, undefined);
 
     const symlinkFile = new Path("temp.txt");
-    const otherFile = new Path("other.txt").writeTextSync("");
+    const otherFile = new Path("other.txt").writeSync("");
     // path ref
     await symlinkFile.symlinkTo(otherFile, { kind: "absolute" });
     const stat3 = await symlinkFile.lstat();
@@ -283,7 +283,7 @@ test("lstatSync", async () => {
     const stat2 = new Path("nonExistent").lstatSync();
     assertEquals(stat2, undefined);
     const symlinkFile = new Path("temp.txt");
-    const otherFile = new Path("other.txt").writeTextSync("");
+    const otherFile = new Path("other.txt").writeSync("");
     symlinkFile.symlinkToSync(otherFile, { kind: "absolute" });
     assertEquals(symlinkFile.lstatSync()!.isSymbolicLink(), true);
   });
@@ -334,7 +334,7 @@ test("exists", async () => {
     const file = new Path("file");
     assert(!await file.exists());
     assert(!file.existsSync());
-    file.writeTextSync("");
+    file.writeSync("");
     assert(await file.exists());
     assert(file.existsSync());
   });
@@ -343,7 +343,7 @@ test("exists", async () => {
 test("realpath", async () => {
   await withTempDir(async (tempDir) => {
     let file = tempDir.join("file").resolve();
-    file.writeTextSync("");
+    file.writeSync("");
     // need to do realPathSync for GH actions CI
     file = file.realPathSync();
     // for the comparison, node doesn't canonicalize
@@ -390,7 +390,7 @@ test("mkdir", async () => {
 
 test("symlinkTo", async () => {
   await withTempDir(async () => {
-    const destFile = new Path("temp.txt").writeTextSync("");
+    const destFile = new Path("temp.txt").writeSync("");
     const symlinkFile = destFile.parentOrThrow().join("other.txt");
     await symlinkFile.symlinkTo(destFile, {
       kind: "absolute",
@@ -414,7 +414,7 @@ test("symlinkTo", async () => {
 
 test("symlinkToSync", async () => {
   await withTempDir(() => {
-    const destFile = new Path("temp.txt").writeTextSync("");
+    const destFile = new Path("temp.txt").writeSync("");
     const symlinkFile = destFile.parentOrThrow().join("other.txt");
 
     // path ref
@@ -455,7 +455,7 @@ test("symlinkTo relative between sibling directories (issue #8)", async () => {
   await withTempDir(async (tempDir) => {
     const dirA = tempDir.join("a").mkdirSync();
     const dirB = tempDir.join("b").mkdirSync();
-    const fileA = dirA.join("a.txt").writeTextSync("hello");
+    const fileA = dirA.join("a.txt").writeSync("hello");
     const symlinkAtB = dirB.join("b.txt");
 
     await symlinkAtB.symlinkTo(fileA, { kind: "relative" });
@@ -471,7 +471,7 @@ test("symlinkToSync relative between sibling directories (issue #8)", async () =
   await withTempDir((tempDir) => {
     const dirA = tempDir.join("a").mkdirSync();
     const dirB = tempDir.join("b").mkdirSync();
-    const fileA = dirA.join("a.txt").writeTextSync("hello");
+    const fileA = dirA.join("a.txt").writeSync("hello");
     const symlinkAtB = dirB.join("b.txt");
 
     symlinkAtB.symlinkToSync(fileA, { kind: "relative" });
@@ -487,7 +487,7 @@ test("symlinkTo relative across deeper directory structures", async () => {
   await withTempDir((tempDir) => {
     tempDir.join("x/y/z").mkdirSync({ recursive: true });
     tempDir.join("other").mkdirSync();
-    const target = tempDir.join("other/target.txt").writeTextSync("data");
+    const target = tempDir.join("other/target.txt").writeSync("data");
     const link = tempDir.join("x/y/z/link.txt");
 
     link.symlinkToSync(target, { kind: "relative" });
@@ -501,7 +501,7 @@ test("symlinkTo relative across deeper directory structures", async () => {
 
 test("symlinkTo relative within same directory stores just the basename", async () => {
   await withTempDir((tempDir) => {
-    const target = tempDir.join("target.txt").writeTextSync("data");
+    const target = tempDir.join("target.txt").writeSync("data");
     const link = tempDir.join("link.txt");
 
     link.symlinkToSync(target, { kind: "relative" });
@@ -511,7 +511,7 @@ test("symlinkTo relative within same directory stores just the basename", async 
 
 test("linkTo", async () => {
   await withTempDir(async () => {
-    const destFile = new Path("temp.txt").writeTextSync("data");
+    const destFile = new Path("temp.txt").writeSync("data");
 
     // async
     {
@@ -536,8 +536,8 @@ test("linkTo", async () => {
 test("readDir", async () => {
   await withTempDir(async () => {
     const dir = new Path(".").resolve();
-    dir.join("file1").writeTextSync("");
-    dir.join("file2").writeTextSync("");
+    dir.join("file1").writeSync("");
+    dir.join("file2").writeSync("");
 
     const entries1 = [];
     for await (const entry of dir.readDir()) {
@@ -597,7 +597,7 @@ test("readMaybeBytes", async () => {
 test("readText", async () => {
   await withTempDir(async () => {
     const file = new Path("file.txt");
-    file.writeTextSync("asdf");
+    file.writeSync("asdf");
     assertEquals(file.readMaybeTextSync(), "asdf");
     assertEquals(await file.readMaybeText(), "asdf");
     const nonExistent = new Path("not-exists");
@@ -609,7 +609,7 @@ test("readText", async () => {
 test("readMaybeText", async () => {
   await withTempDir(async () => {
     const file = new Path("file.txt");
-    file.writeTextSync("asdf");
+    file.writeSync("asdf");
     assertEquals(file.readMaybeTextSync(), "asdf");
     assertEquals(await file.readMaybeText(), "asdf");
     const nonExistent = new Path("not-exists");
@@ -643,7 +643,7 @@ test("readMaybeJson", async () => {
     data = await nonExistent.readMaybeJson();
     assertEquals(data, undefined);
 
-    file.writeTextSync("1 23 532lkjladf asd");
+    file.writeSync("1 23 532lkjladf asd");
     assertThrows(
       () => file.readMaybeJsonSync(),
       Error,
@@ -665,12 +665,12 @@ test("write", async () => {
     const file3 = dir.join("subDir3/file.txt");
     const file4 = dir.join("subDir4/file.txt");
 
-    await file1.writeText("test");
+    await file1.write("test");
     assertEquals(file1.readTextSync(), "test");
 
-    file2.writeTextSync("test");
+    file2.writeSync("test");
     assertEquals(file2.readTextSync(), "test");
-    file2.writeTextSync("\ntest", { append: true });
+    file2.writeSync("\ntest", { append: true });
     assertEquals(file2.readTextSync(), "test\ntest");
 
     await file3.write(new TextEncoder().encode("test"));
@@ -681,8 +681,8 @@ test("write", async () => {
 
     // writing on top of a file should surface the original filesystem error
     const fileOnFile = file1.join("fileOnFile");
-    await assertRejects(() => fileOnFile.writeText("asdf"), Error);
-    assertThrows(() => fileOnFile.writeTextSync("asdf"), Error);
+    await assertRejects(() => fileOnFile.write("asdf"), Error);
+    assertThrows(() => fileOnFile.writeSync("asdf"), Error);
   });
 });
 
@@ -738,15 +738,15 @@ test("writeJsonPretty", async () => {
 
 test("create", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("text");
+    const path = new Path("file.txt").writeSync("text");
     let file = await path.create();
-    file.writeTextSync("asdf");
+    file.writeSync("asdf");
     file.close();
     path.removeSync();
     file = await path.create();
     file.close();
     file = path.createSync();
-    file.writeTextSync("asdf");
+    file.writeSync("asdf");
     file.close();
     path.removeSync();
     file = path.createSync();
@@ -756,7 +756,7 @@ test("create", async () => {
 
 test("createNew", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("text");
+    const path = new Path("file.txt").writeSync("text");
     await assertRejects(() => path.createNew());
     path.removeSync();
     let file = await path.createNew();
@@ -770,13 +770,13 @@ test("createNew", async () => {
 
 test("open", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("text");
+    const path = new Path("file.txt").writeSync("text");
     let file = await path.open({ write: true });
-    await file.writeText("1");
-    file.writeTextSync("2");
+    await file.write("1");
+    file.writeSync("2");
     file.close();
     file = path.openSync({ write: true, append: true });
-    await file.writeBytes(new TextEncoder().encode("3"));
+    await file.write(new TextEncoder().encode("3"));
     file.close();
     assertEquals(path.readTextSync(), "12xt3");
   });
@@ -784,10 +784,10 @@ test("open", async () => {
 
 test("remove", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("text");
+    const path = new Path("file.txt").writeSync("text");
     assert(path.existsSync());
     assert(!path.removeSync().existsSync());
-    path.writeTextSync("asdf");
+    path.writeSync("asdf");
     assert(path.existsSync());
     assert(!(await path.remove()).existsSync());
   });
@@ -796,9 +796,9 @@ test("remove", async () => {
 test("emptyDir", async () => {
   await withTempDir(async (path) => {
     const dir = path.join("subDir").mkdirSync();
-    const file = dir.join("file.txt").writeTextSync("text");
+    const file = dir.join("file.txt").writeSync("text");
     const subDir = dir.join("subDir").mkdirSync();
-    subDir.join("test").writeTextSync("");
+    subDir.join("test").writeSync("");
     assert((await dir.emptyDir()).existsSync());
     assert(!file.existsSync());
     assert(!subDir.existsSync());
@@ -809,9 +809,9 @@ test("emptyDir", async () => {
 test("emptyDirSync", async () => {
   await withTempDir((path) => {
     const dir = path.join("subDir").mkdirSync();
-    const file = dir.join("file.txt").writeTextSync("text");
+    const file = dir.join("file.txt").writeSync("text");
     const subDir = dir.join("subDir").mkdirSync();
-    subDir.join("test").writeTextSync("");
+    subDir.join("test").writeSync("");
     assert(dir.emptyDirSync().existsSync());
     assert(!file.existsSync());
     assert(!subDir.existsSync());
@@ -822,9 +822,9 @@ test("emptyDirSync", async () => {
 test("ensureDir", async () => {
   await withTempDir(async (path) => {
     const dir = path.join("subDir").mkdirSync();
-    const file = dir.join("file.txt").writeTextSync("text");
+    const file = dir.join("file.txt").writeSync("text");
     const subDir = dir.join("subDir").mkdirSync();
-    subDir.join("test").writeTextSync("");
+    subDir.join("test").writeSync("");
     assert((await dir.ensureDir()).existsSync());
     assert(file.existsSync());
     assert(subDir.existsSync());
@@ -835,9 +835,9 @@ test("ensureDir", async () => {
 test("ensureDirSync", async () => {
   await withTempDir((path) => {
     const dir = path.join("subDir").mkdirSync();
-    const file = dir.join("file.txt").writeTextSync("text");
+    const file = dir.join("file.txt").writeSync("text");
     const subDir = dir.join("subDir").mkdirSync();
-    subDir.join("test").writeTextSync("");
+    subDir.join("test").writeSync("");
     assert(dir.ensureDirSync().isDirSync());
     assert(file.existsSync());
     assert(subDir.existsSync());
@@ -857,7 +857,7 @@ test("ensureFile", async () => {
 test("copy", async () => {
   // file
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("text");
+    const path = new Path("file.txt").writeSync("text");
     const newPath = await path.copy("other.txt");
     assert(path.existsSync());
     assert(newPath.existsSync());
@@ -869,13 +869,13 @@ test("copy", async () => {
   // directory
   await withTempDir(async () => {
     const dir = new Path("dir").mkdirSync();
-    dir.join("file.txt").writeTextSync("text");
+    dir.join("file.txt").writeSync("text");
     const dir2 = new Path("dir2");
     await dir.copy(dir2);
     assertEquals(dir2.join("file.txt").readTextSync(), "text");
     await assertRejects(() => dir.copy(dir2));
     assertEquals(dir2.join("file.txt").readTextSync(), "text");
-    dir.join("file.txt").writeTextSync("text2");
+    dir.join("file.txt").writeSync("text2");
     await dir.copy(dir2, { overwrite: true });
     assertEquals(dir2.join("file.txt").readTextSync(), "text2");
   });
@@ -884,7 +884,7 @@ test("copy", async () => {
 test("copyToDir", async () => {
   await withTempDir(async () => {
     const path = new Path("file.txt")
-      .writeTextSync("text");
+      .writeSync("text");
     const dir = new Path("dir").mkdirSync();
     const newPath = await path.copyToDir(dir);
     assert(path.existsSync());
@@ -901,11 +901,11 @@ test("copyToDir", async () => {
 
 test("rename", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("");
+    const path = new Path("file.txt").writeSync("");
     const newPath = path.renameSync("other.txt");
     assert(!path.existsSync());
     assert(newPath.existsSync());
-    path.writeTextSync("");
+    path.writeSync("");
     const newPath2 = await path.rename("other2.txt");
     assert(!path.existsSync());
     assert(newPath2.existsSync());
@@ -915,7 +915,7 @@ test("rename", async () => {
 test("renameToDir", async () => {
   await withTempDir(async () => {
     const path = new Path("file.txt")
-      .writeTextSync("text");
+      .writeSync("text");
     const dir = new Path("dir").mkdirSync();
     const newPath = await path.renameToDir(dir);
     assert(!path.existsSync());
@@ -944,7 +944,7 @@ test("renameToDir", async () => {
 test("pipeTo", async () => {
   await withTempDir(async () => {
     const largeText = "asdf".repeat(100_000);
-    const textFile = new Path("file.txt").writeTextSync(largeText);
+    const textFile = new Path("file.txt").writeSync(largeText);
     const otherFilePath = textFile.parentOrThrow().join("other.txt");
     const otherFile = otherFilePath.openSync({ write: true, create: true });
     await textFile.pipeTo(otherFile.writable);
@@ -981,18 +981,18 @@ test("append", async () => {
     const file = path.join("file.txt");
     await file.append(new TextEncoder().encode("1\n"));
     file.appendSync(new TextEncoder().encode("2\n"));
-    await file.appendText("3\n");
-    file.appendTextSync("4\n");
+    await file.append("3\n");
+    file.appendSync("4\n");
     assertEquals(file.readTextSync(), "1\n2\n3\n4\n");
   });
 });
 
 test("open with create but no truncate preserves existing content", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("hello");
+    const path = new Path("file.txt").writeSync("hello");
     // { write: true, create: true } without truncate — should NOT truncate
     const file = await path.open({ write: true, create: true });
-    await file.writeText("hi");
+    await file.write("hi");
     file.close();
     // "hi" overwrites first 2 bytes, "llo" preserved
     assertEquals(path.readTextSync(), "hillo");
@@ -1003,7 +1003,7 @@ test("open with create on missing file creates without truncate", async () => {
   await withTempDir(() => {
     const path = new Path("new.txt");
     const file = path.openSync({ write: true, create: true });
-    file.writeTextSync("fresh");
+    file.writeSync("fresh");
     file.close();
     assertEquals(path.readTextSync(), "fresh");
   });
@@ -1011,9 +1011,9 @@ test("open with create on missing file creates without truncate", async () => {
 
 test("open with truncate truncates existing file", async () => {
   await withTempDir(() => {
-    const path = new Path("file.txt").writeTextSync("hello");
+    const path = new Path("file.txt").writeSync("hello");
     const file = path.openSync({ write: true, create: true, truncate: true });
-    file.writeTextSync("hi");
+    file.writeSync("hi");
     file.close();
     assertEquals(path.readTextSync(), "hi");
   });
@@ -1021,9 +1021,9 @@ test("open with truncate truncates existing file", async () => {
 
 test("open read+write roundtrip", async () => {
   await withTempDir(() => {
-    const path = new Path("file.txt").writeTextSync("abcdef");
+    const path = new Path("file.txt").writeSync("abcdef");
     const file = path.openSync({ read: true, write: true });
-    file.writeTextSync("XYZ");
+    file.writeSync("XYZ");
     file.close();
     assertEquals(path.readTextSync(), "XYZdef");
   });
@@ -1055,7 +1055,7 @@ test("write honors AbortSignal", async () => {
 
 test("append honors AbortSignal", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("start");
+    const path = new Path("file.txt").writeSync("start");
     const controller = new AbortController();
     controller.abort(new Error("aborted-by-test"));
     await assertRejects(
@@ -1073,7 +1073,7 @@ test("append honors AbortSignal", async () => {
 
 test("readBytes honors AbortSignal", async () => {
   await withTempDir(async () => {
-    const path = new Path("file.txt").writeTextSync("data");
+    const path = new Path("file.txt").writeSync("data");
     const controller = new AbortController();
     controller.abort(new Error("aborted-by-test"));
     await assertRejects(

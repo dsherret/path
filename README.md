@@ -2,8 +2,7 @@
 
 [![JSR](https://jsr.io/badges/@david/path)](https://jsr.io/@david/path)
 
-Path class for JavaScript built on top of [@std/path](https://jsr.io/@std/path)
-and [@std/fs](https://jsr.io/@std/fs).
+Path class for JavaScript.
 
 - [Docs](https://jsr.io/@david/path/doc/~/Path)
 

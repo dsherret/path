@@ -621,42 +621,63 @@ test("readMaybeText", async () => {
 test("lines", async () => {
   await withTempDir(async () => {
     const file = new Path("file.txt");
+    const cases: { content: string; expected: string[] }[] = [
+      // trailing newline is not a blank line
+      { content: "a\nb\n", expected: ["a", "b"] },
+      // no trailing newline
+      { content: "a\nb", expected: ["a", "b"] },
+      // \r\n line endings
+      { content: "a\r\nb\r\n", expected: ["a", "b"] },
+      // embedded blank lines are preserved
+      { content: "a\n\nb", expected: ["a", "", "b"] },
+      // double trailing newline drops only one
+      { content: "a\n\n", expected: ["a", ""] },
+      // standalone \r is part of the line
+      { content: "a\rb\n", expected: ["a\rb"] },
+      // empty file
+      { content: "", expected: [] },
+      // single newline
+      { content: "\n", expected: [""] },
+    ];
+    for (const { content, expected } of cases) {
+      file.writeSync(content);
+      assertEquals(await file.lines(), expected, `lines ${inspect(content)}`);
+      assertEquals(
+        file.linesSync(),
+        expected,
+        `linesSync ${inspect(content)}`,
+      );
+      const iterAsync: string[] = [];
+      for await (const line of file.linesIter()) iterAsync.push(line);
+      assertEquals(iterAsync, expected, `linesIter ${inspect(content)}`);
+      assertEquals(
+        Array.from(file.linesIterSync()),
+        expected,
+        `linesIterSync ${inspect(content)}`,
+      );
+    }
+  });
+});
 
-    // trailing newline is not a blank line
-    file.writeSync("a\nb\n");
-    assertEquals(await file.lines(), ["a", "b"]);
-    assertEquals(file.linesSync(), ["a", "b"]);
+test("linesIter streams across read-buffer boundaries", async () => {
+  await withTempDir(async () => {
+    const file = new Path("big.txt");
+    // build ~200KB across ~2000 lines with mixed \n and \r\n,
+    // larger than the 16KB internal read buffer
+    const expected: string[] = [];
+    const parts: string[] = [];
+    for (let i = 0; i < 2000; i++) {
+      const line = `line-${i}-` + "x".repeat((i % 97) + 5);
+      expected.push(line);
+      parts.push(line);
+      parts.push(i % 2 === 0 ? "\n" : "\r\n");
+    }
+    file.writeSync(parts.join(""));
 
-    // no trailing newline
-    file.writeSync("a\nb");
-    assertEquals(file.linesSync(), ["a", "b"]);
-
-    // \r\n line endings
-    file.writeSync("a\r\nb\r\n");
-    assertEquals(file.linesSync(), ["a", "b"]);
-
-    // embedded blank lines are preserved
-    file.writeSync("a\n\nb");
-    assertEquals(file.linesSync(), ["a", "", "b"]);
-
-    // double trailing newline drops only one
-    file.writeSync("a\n\n");
-    assertEquals(file.linesSync(), ["a", ""]);
-
-    // standalone \r is part of the line
-    file.writeSync("a\rb\n");
-    assertEquals(file.linesSync(), ["a\rb"]);
-
-    // empty file
-    file.writeSync("");
-    assertEquals(file.linesSync(), []);
-
-    // iterator variants
-    file.writeSync("a\nb\n");
-    const asyncLines = [];
+    const asyncLines: string[] = [];
     for await (const line of file.linesIter()) asyncLines.push(line);
-    assertEquals(asyncLines, ["a", "b"]);
-    assertEquals(Array.from(file.linesIterSync()), ["a", "b"]);
+    assertEquals(asyncLines, expected);
+    assertEquals(Array.from(file.linesIterSync()), expected);
   });
 });
 

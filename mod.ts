@@ -649,7 +649,7 @@ export class Path {
    * [Rust's `str::lines`](https://doc.rust-lang.org/std/primitive.str.html#method.lines)).
    */
   async lines(options?: _fs.ReadFileOptions): Promise<string[]> {
-    return splitLines(await this.readText(options));
+    return [...splitLines(await this.readText(options))];
   }
 
   /** Synchronously reads the file's text and returns an array of its lines.
@@ -657,25 +657,85 @@ export class Path {
    * See `.lines()` for the splitting semantics.
    */
   linesSync(): string[] {
-    return splitLines(this.readTextSync());
+    return [...splitLines(this.readTextSync())];
   }
 
-  /** Reads the file's text and iterates over its lines.
+  /** Streams the file and iterates over its lines without loading it all into memory.
    *
    * See `.lines()` for the splitting semantics.
    */
   async *linesIter(
     options?: _fs.ReadFileOptions,
   ): AsyncIterableIterator<string> {
-    yield* splitLines(await this.readText(options));
+    const file = await _fs.openFile(this.#path, { read: true });
+    try {
+      const decoder = new TextDecoder();
+      const chunk = new Uint8Array(16384);
+      let buffer = "";
+      while (true) {
+        options?.signal?.throwIfAborted();
+        const n = await file.read(chunk);
+        if (n === 0) break;
+        buffer += decoder.decode(chunk.subarray(0, n), { stream: true });
+        let start = 0;
+        while (true) {
+          const nl = buffer.indexOf("\n", start);
+          if (nl === -1) break;
+          const end = nl > start && buffer.charCodeAt(nl - 1) === 13
+            ? nl - 1
+            : nl;
+          yield buffer.substring(start, end);
+          start = nl + 1;
+        }
+        if (start > 0) buffer = buffer.substring(start);
+      }
+      buffer += decoder.decode();
+      if (buffer !== "") yield buffer;
+    } finally {
+      try {
+        file.close();
+      } catch {
+        // ignore
+      }
+    }
   }
 
-  /** Synchronously reads the file's text and iterates over its lines.
+  /** Synchronously streams the file and iterates over its lines without
+   * loading it all into memory.
    *
    * See `.lines()` for the splitting semantics.
    */
   *linesIterSync(): IterableIterator<string> {
-    yield* splitLines(this.readTextSync());
+    const file = _fs.openFileSync(this.#path, { read: true });
+    try {
+      const decoder = new TextDecoder();
+      const chunk = new Uint8Array(16384);
+      let buffer = "";
+      while (true) {
+        const n = file.readSync(chunk);
+        if (n === 0) break;
+        buffer += decoder.decode(chunk.subarray(0, n), { stream: true });
+        let start = 0;
+        while (true) {
+          const nl = buffer.indexOf("\n", start);
+          if (nl === -1) break;
+          const end = nl > start && buffer.charCodeAt(nl - 1) === 13
+            ? nl - 1
+            : nl;
+          yield buffer.substring(start, end);
+          start = nl + 1;
+        }
+        if (start > 0) buffer = buffer.substring(start);
+      }
+      buffer += decoder.decode();
+      if (buffer !== "") yield buffer;
+    } finally {
+      try {
+        file.close();
+      } catch {
+        // ignore
+      }
+    }
   }
 
   /** Reads and parses the file as JSON, throwing if it doesn't exist or is not valid JSON. */
@@ -1353,10 +1413,20 @@ function writeAllSync(
   }
 }
 
-function splitLines(text: string): string[] {
-  if (text === "") return [];
-  const lines = text.split(/\r?\n/);
-  // matches Rust: trailing final line ending produces no blank line
-  if (text.endsWith("\n")) lines.pop();
-  return lines;
+function* splitLines(text: string): Generator<string> {
+  if (text === "") return;
+  let start = 0;
+  while (true) {
+    const nl = text.indexOf("\n", start);
+    if (nl === -1) {
+      if (start < text.length) yield text.substring(start);
+      return;
+    }
+    // strip \r when it immediately precedes \n
+    const end = nl > start && text.charCodeAt(nl - 1) === 13 ? nl - 1 : nl;
+    yield text.substring(start, end);
+    start = nl + 1;
+    // a final line ending does not produce a trailing blank line
+    if (start === text.length) return;
+  }
 }

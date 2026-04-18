@@ -159,6 +159,21 @@ export class FsFile {
     return fs.writeSync(this._fd, bytes, 0, bytes.length);
   }
 
+  /** Reads into `buf`, resolving to the number of bytes read (0 at EOF). */
+  read(buf: Uint8Array): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      fs.read(this._fd, buf, 0, buf.length, null, (err, bytesRead: number) => {
+        if (err) reject(err);
+        else resolve(bytesRead);
+      });
+    });
+  }
+
+  /** Synchronously reads into `buf`, returning the number of bytes read (0 at EOF). */
+  readSync(buf: Uint8Array): number {
+    return fs.readSync(this._fd, buf, 0, buf.length, null);
+  }
+
   /** Closes the file handle. */
   close(): void {
     fs.closeSync(this._fd);

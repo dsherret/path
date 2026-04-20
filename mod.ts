@@ -809,6 +809,20 @@ export class Path {
     return this;
   }
 
+  /** Writes the provided text to the file.
+   * @deprecated Use `.write(text)` instead — `write` now accepts strings.
+   */
+  writeText(text: string, options?: _fs.WriteFileOptions): Promise<this> {
+    return this.write(text, options);
+  }
+
+  /** Synchronously writes the provided text to the file.
+   * @deprecated Use `.writeSync(text)` instead — `writeSync` now accepts strings.
+   */
+  writeTextSync(text: string, options?: _fs.WriteFileOptions): this {
+    return this.writeSync(text, options);
+  }
+
   /** Writes out the provided object as compact JSON. */
   async writeJson(
     obj: unknown,
@@ -1306,7 +1320,49 @@ function createFsFileWrapper(file: _fs.FsFile): FsFileWrapper {
 }
 
 /** A handle to an open file. */
-export class FsFileWrapper extends _fs.FsFile {}
+export class FsFileWrapper extends _fs.FsFile {
+  /** Writes the provided text to this file, looping to handle partial writes. */
+  writeText(text: string): Promise<this> {
+    return this.writeBytes(new TextEncoder().encode(text));
+  }
+
+  /** Synchronously writes the provided text to this file, looping to handle partial writes. */
+  writeTextSync(text: string): this {
+    return this.writeBytesSync(new TextEncoder().encode(text));
+  }
+
+  /** Writes all the provided bytes to this file, looping to handle partial writes. */
+  async writeBytes(bytes: Uint8Array): Promise<this> {
+    let nwritten = 0;
+    while (nwritten < bytes.length) {
+      nwritten += await this.write(bytes.subarray(nwritten));
+    }
+    return this;
+  }
+
+  /** Synchronously writes all the provided bytes to this file, looping to handle partial writes. */
+  writeBytesSync(bytes: Uint8Array): this {
+    let nwritten = 0;
+    while (nwritten < bytes.length) {
+      nwritten += this.writeSync(bytes.subarray(nwritten));
+    }
+    return this;
+  }
+
+  /** Writes all the provided data to this file, dispatching to `.writeText` or `.writeBytes` based on input type. */
+  writeAll(data: string | Uint8Array): Promise<this> {
+    return typeof data === "string"
+      ? this.writeText(data)
+      : this.writeBytes(data);
+  }
+
+  /** Synchronously writes all the provided data to this file, dispatching to `.writeTextSync` or `.writeBytesSync` based on input type. */
+  writeAllSync(data: string | Uint8Array): this {
+    return typeof data === "string"
+      ? this.writeTextSync(data)
+      : this.writeBytesSync(data);
+  }
+}
 
 async function createSymlink(opts: CreateSymlinkOpts) {
   let kind = opts.type;

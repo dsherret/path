@@ -1,4 +1,4 @@
-// temporarily bundled until https://github.com/denoland/std/pull/7103 has been released
+// temporarily vendored until https://github.com/denoland/std/pull/7103 has been released
 function checkWindows() {
   const global = globalThis;
   const platform = global.process?.platform;

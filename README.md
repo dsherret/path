@@ -15,7 +15,7 @@ deno add @david/path
 ## Example
 
 ```ts
-import path from "@david/path";
+import { path } from "@david/path";
 
 const srcDir = path("src");
 
@@ -23,6 +23,14 @@ console.log(srcDir.existsSync());
 
 const dataFile = srcDir.join("data.txt");
 dataFile.writeTextSync("Hello there!");
+```
+
+Alternatively you can construct the `Path` class directly:
+
+```ts
+import { Path } from "@david/path";
+
+const srcDir = new Path("src");
 ```
 
 ## Road to 1.0

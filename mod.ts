@@ -2,13 +2,14 @@ import {
   basename,
   dirname,
   extname,
+  fromFileUrl,
   isAbsolute,
   join,
   normalize,
   relative,
   resolve,
-} from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+  toFileUrl,
+} from "./path.js";
 import * as _fs from "./_fs.ts";
 
 export type {
@@ -59,12 +60,12 @@ export class Path {
   /** Creates a new path from the provided string, URL, or another Path. */
   constructor(path: string | URL | Path) {
     if (path instanceof URL) {
-      this.#path = fileURLToPath(path);
+      this.#path = fromFileUrl(path);
     } else if (path instanceof Path) {
       this.#path = path.toString();
     } else if (typeof path === "string") {
       if (path.startsWith("file://")) {
-        this.#path = fileURLToPath(path);
+        this.#path = fromFileUrl(path);
       } else {
         this.#path = path;
       }
@@ -100,7 +101,7 @@ export class Path {
   /** Resolves the path and gets the file URL. */
   toFileUrl(): URL {
     const resolvedPath = this.resolve();
-    return pathToFileURL(resolvedPath.toString());
+    return toFileUrl(resolvedPath.toString());
   }
 
   /** If this path reference is the same as another one. */

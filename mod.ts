@@ -36,6 +36,13 @@ export interface SymlinkOptions {
   type?: "file" | "dir" | "junction";
 }
 
+/** Creates a new {@linkcode Path}. Shorthand for `new Path(...)`. */
+export function path(path: string | URL | Path): Path {
+  return new Path(path);
+}
+
+export default path;
+
 /** Represents a path on the file system. */
 export class Path {
   readonly #path: string;

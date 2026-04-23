@@ -7,10 +7,12 @@ function checkWindows() {
   if (typeof os === "string") return os === "windows";
   return global.navigator?.platform?.startsWith("Win") ?? false;
 }
-var isWindows = checkWindows();
+const isWindows = checkWindows();
 function assertPath(path) {
   if (typeof path !== "string") {
-    throw new TypeError(`Path must be a string, received "${JSON.stringify(path)}"`);
+    throw new TypeError(
+      `Path must be a string, received "${JSON.stringify(path)}"`,
+    );
   }
 }
 function stripSuffix(name, suffix) {
@@ -45,7 +47,9 @@ function assertArgs(path, suffix) {
   assertPath(path);
   if (path.length === 0) return path;
   if (typeof suffix !== "string") {
-    throw new TypeError(`Suffix must be a string, received "${JSON.stringify(suffix)}"`);
+    throw new TypeError(
+      `Suffix must be a string, received "${JSON.stringify(suffix)}"`,
+    );
   }
 }
 function assertArg(url) {
@@ -57,7 +61,9 @@ function assertArg(url) {
 }
 function fromFileUrl(url) {
   url = assertArg(url);
-  return decodeURIComponent(url.pathname.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+  return decodeURIComponent(
+    url.pathname.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"),
+  );
 }
 function stripTrailingSeparators(segment, isSep) {
   if (segment.length <= 1) {
@@ -73,14 +79,14 @@ function stripTrailingSeparators(segment, isSep) {
   }
   return segment.slice(0, end);
 }
-var CHAR_UPPERCASE_A = 65;
-var CHAR_LOWERCASE_A = 97;
-var CHAR_UPPERCASE_Z = 90;
-var CHAR_LOWERCASE_Z = 122;
-var CHAR_DOT = 46;
-var CHAR_FORWARD_SLASH = 47;
-var CHAR_BACKWARD_SLASH = 92;
-var CHAR_COLON = 58;
+const CHAR_UPPERCASE_A = 65;
+const CHAR_LOWERCASE_A = 97;
+const CHAR_UPPERCASE_Z = 90;
+const CHAR_LOWERCASE_Z = 122;
+const CHAR_DOT = 46;
+const CHAR_FORWARD_SLASH = 47;
+const CHAR_BACKWARD_SLASH = 92;
+const CHAR_COLON = 58;
 function isPosixPathSeparator(code) {
   return code === CHAR_FORWARD_SLASH;
 }
@@ -90,7 +96,10 @@ function basename(path, suffix = "") {
   }
   assertArgs(path, suffix);
   const lastSegment = lastPathSegment(path, isPosixPathSeparator);
-  const strippedSegment = stripTrailingSeparators(lastSegment, isPosixPathSeparator);
+  const strippedSegment = stripTrailingSeparators(
+    lastSegment,
+    isPosixPathSeparator,
+  );
   return suffix ? stripSuffix(strippedSegment, suffix) : strippedSegment;
 }
 function isPosixPathSeparator2(code) {
@@ -100,11 +109,14 @@ function isPathSeparator(code) {
   return code === CHAR_FORWARD_SLASH || code === CHAR_BACKWARD_SLASH;
 }
 function isWindowsDeviceRoot(code) {
-  return code >= CHAR_LOWERCASE_A && code <= CHAR_LOWERCASE_Z || code >= CHAR_UPPERCASE_A && code <= CHAR_UPPERCASE_Z;
+  return code >= CHAR_LOWERCASE_A && code <= CHAR_LOWERCASE_Z ||
+    code >= CHAR_UPPERCASE_A && code <= CHAR_UPPERCASE_Z;
 }
 function fromFileUrl2(url) {
   url = assertArg(url);
-  let path = decodeURIComponent(url.pathname.replace(/\//g, "\\").replace(/%(?![0-9A-Fa-f]{2})/g, "%25")).replace(/^\\*([A-Za-z]:)(\\|$)/, "$1\\");
+  let path = decodeURIComponent(
+    url.pathname.replace(/\//g, "\\").replace(/%(?![0-9A-Fa-f]{2})/g, "%25"),
+  ).replace(/^\\*([A-Za-z]:)(\\|$)/, "$1\\");
   if (url.hostname !== "") {
     path = `\\\\${url.hostname}${path}`;
   }
@@ -254,9 +266,11 @@ function extname(path) {
       preDotState = -1;
     }
   }
-  if (startDot === -1 || end === -1 || // We saw a non-dot character immediately before the dot
-  preDotState === 0 || // The (right-most) trimmed path component is exactly '..'
-  preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+  if (
+    startDot === -1 || end === -1 || // We saw a non-dot character immediately before the dot
+    preDotState === 0 || // The (right-most) trimmed path component is exactly '..'
+    preDotState === 1 && startDot === end - 1 && startDot === startPart + 1
+  ) {
     return "";
   }
   return path.slice(startDot, end);
@@ -272,7 +286,10 @@ function extname2(path) {
   let end = -1;
   let matchedSlash = true;
   let preDotState = 0;
-  if (path.length >= 2 && path.charCodeAt(1) === CHAR_COLON && isWindowsDeviceRoot(path.charCodeAt(0))) {
+  if (
+    path.length >= 2 && path.charCodeAt(1) === CHAR_COLON &&
+    isWindowsDeviceRoot(path.charCodeAt(0))
+  ) {
     start = startPart = 2;
   }
   for (let i = path.length - 1; i >= start; --i) {
@@ -295,9 +312,11 @@ function extname2(path) {
       preDotState = -1;
     }
   }
-  if (startDot === -1 || end === -1 || // We saw a non-dot character immediately before the dot
-  preDotState === 0 || // The (right-most) trimmed path component is exactly '..'
-  preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+  if (
+    startDot === -1 || end === -1 || // We saw a non-dot character immediately before the dot
+    preDotState === 0 || // The (right-most) trimmed path component is exactly '..'
+    preDotState === 1 && startDot === end - 1 && startDot === startPart + 1
+  ) {
     return "";
   }
   return path.slice(startDot, end);
@@ -345,8 +364,13 @@ function normalizeString(path, allowAboveRoot, separator, isPathSeparator2) {
     else code = CHAR_FORWARD_SLASH;
     if (isPathSeparator2(code)) {
       if (lastSlash === i - 1 || dots === 1) {
+        // ignore
       } else if (lastSlash !== i - 1 && dots === 2) {
-        if (res.length < 2 || lastSegmentLength !== 2 || res.charCodeAt(res.length - 1) !== CHAR_DOT || res.charCodeAt(res.length - 2) !== CHAR_DOT) {
+        if (
+          res.length < 2 || lastSegmentLength !== 2 ||
+          res.charCodeAt(res.length - 1) !== CHAR_DOT ||
+          res.charCodeAt(res.length - 2) !== CHAR_DOT
+        ) {
           if (res.length > 2) {
             const lastSlashIndex = res.lastIndexOf(separator);
             if (lastSlashIndex === -1) {
@@ -393,7 +417,9 @@ function normalize(path) {
   }
   assertArg4(path);
   const isAbsolute4 = isPosixPathSeparator(path.charCodeAt(0));
-  const trailingSeparator = isPosixPathSeparator(path.charCodeAt(path.length - 1));
+  const trailingSeparator = isPosixPathSeparator(
+    path.charCodeAt(path.length - 1),
+  );
   path = normalizeString(path, !isAbsolute4, "/", isPosixPathSeparator);
   if (path.length === 0 && !isAbsolute4) path = ".";
   if (path.length > 0 && trailingSeparator) path += "/";
@@ -405,10 +431,12 @@ function join(path, ...paths) {
   if (path instanceof URL) {
     path = fromFileUrl(path);
   }
-  paths = path ? [
-    path,
-    ...paths
-  ] : paths;
+  paths = path
+    ? [
+      path,
+      ...paths,
+    ]
+    : paths;
   paths.forEach((path2) => assertPath(path2));
   const joined = paths.filter((path2) => path2.length > 0).join("/");
   return joined === "" ? "." : normalize(joined);
@@ -471,7 +499,12 @@ function normalize2(path) {
   }
   let tail;
   if (rootEnd < len) {
-    tail = normalizeString(path.slice(rootEnd), !isAbsolute4, "\\", isPathSeparator);
+    tail = normalizeString(
+      path.slice(rootEnd),
+      !isAbsolute4,
+      "\\",
+      isPathSeparator,
+    );
   } else {
     tail = "";
   }
@@ -495,10 +528,12 @@ function join2(path, ...paths) {
   if (path instanceof URL) {
     path = fromFileUrl2(path);
   }
-  paths = path ? [
-    path,
-    ...paths
-  ] : paths;
+  paths = path
+    ? [
+      path,
+      ...paths,
+    ]
+    : paths;
   paths.forEach((path2) => assertPath(path2));
   paths = paths.filter((path2) => path2.length > 0);
   if (paths.length === 0) return ".";
@@ -550,7 +585,9 @@ function resolve(...pathSegments) {
     let path;
     if (i >= 0) path = pathSegments[i];
     else {
-      path = cwd("Resolved a relative path without a current working directory (CWD)");
+      path = cwd(
+        "Resolved a relative path without a current working directory (CWD)",
+      );
     }
     assertPath(path);
     if (path.length === 0) {
@@ -559,7 +596,12 @@ function resolve(...pathSegments) {
     resolvedPath = `${path}/${resolvedPath}`;
     resolvedAbsolute = isPosixPathSeparator(path.charCodeAt(0));
   }
-  resolvedPath = normalizeString(resolvedPath, !resolvedAbsolute, "/", isPosixPathSeparator);
+  resolvedPath = normalizeString(
+    resolvedPath,
+    !resolvedAbsolute,
+    "/",
+    isPosixPathSeparator,
+  );
   if (resolvedAbsolute) {
     if (resolvedPath.length > 0) return `/${resolvedPath}`;
     else return "/";
@@ -636,10 +678,17 @@ function resolve2(...pathSegments) {
     if (i >= 0) {
       path = pathSegments[i];
     } else if (!resolvedDevice) {
-      path = cwd("Resolved a drive-letter-less path without a current working directory (CWD)");
+      path = cwd(
+        "Resolved a drive-letter-less path without a current working directory (CWD)",
+      );
     } else {
-      path = cwd("Resolved a relative path without a current working directory (CWD)");
-      if (path === void 0 || path.slice(0, 3).toLowerCase() !== `${resolvedDevice.toLowerCase()}\\`) {
+      path = cwd(
+        "Resolved a relative path without a current working directory (CWD)",
+      );
+      if (
+        path === void 0 ||
+        path.slice(0, 3).toLowerCase() !== `${resolvedDevice.toLowerCase()}\\`
+      ) {
         path = `${resolvedDevice}\\`;
       }
     }
@@ -698,7 +747,10 @@ function resolve2(...pathSegments) {
       rootEnd = 1;
       isAbsolute4 = true;
     }
-    if (device.length > 0 && resolvedDevice.length > 0 && device.toLowerCase() !== resolvedDevice.toLowerCase()) {
+    if (
+      device.length > 0 && resolvedDevice.length > 0 &&
+      device.toLowerCase() !== resolvedDevice.toLowerCase()
+    ) {
       continue;
     }
     if (resolvedDevice.length === 0 && device.length > 0) {
@@ -710,7 +762,12 @@ function resolve2(...pathSegments) {
     }
     if (resolvedAbsolute && resolvedDevice.length > 0) break;
   }
-  resolvedTail = normalizeString(resolvedTail, !resolvedAbsolute, "\\", isPathSeparator);
+  resolvedTail = normalizeString(
+    resolvedTail,
+    !resolvedAbsolute,
+    "\\",
+    isPathSeparator,
+  );
   return resolvedDevice + (resolvedAbsolute ? "\\" : "") + resolvedTail || ".";
 }
 function relative2(from, to) {
@@ -790,13 +847,13 @@ function relative3(from, to) {
 function resolve3(...pathSegments) {
   return isWindows ? resolve2(...pathSegments) : resolve(...pathSegments);
 }
-var WHITESPACE_ENCODINGS = {
+const WHITESPACE_ENCODINGS = {
   "	": "%09",
   "\n": "%0A",
   "\v": "%0B",
   "\f": "%0C",
   "\r": "%0D",
-  " ": "%20"
+  " ": "%20",
 };
 function encodeWhitespace(string) {
   return string.replaceAll(/[\s]/g, (c) => {
@@ -808,14 +865,18 @@ function toFileUrl(path) {
     throw new TypeError(`Path must be absolute: received "${path}"`);
   }
   const url = new URL("file:///");
-  url.pathname = encodeWhitespace(path.replace(/%/g, "%25").replace(/\\/g, "%5C"));
+  url.pathname = encodeWhitespace(
+    path.replace(/%/g, "%25").replace(/\\/g, "%5C"),
+  );
   return url;
 }
 function toFileUrl2(path) {
   if (!isAbsolute2(path)) {
     throw new TypeError(`Path must be absolute: received "${path}"`);
   }
-  const [, hostname, pathname] = path.match(/^(?:[/\\]{2}([^/\\]+)(?=[/\\](?:[^/\\]|$)))?(.*)/);
+  const [, hostname, pathname] = path.match(
+    /^(?:[/\\]{2}([^/\\]+)(?=[/\\](?:[^/\\]|$)))?(.*)/,
+  );
   const url = new URL("file:///");
   url.pathname = encodeWhitespace(pathname.replace(/%/g, "%25"));
   if (hostname !== void 0 && hostname !== "localhost") {
@@ -839,5 +900,5 @@ export {
   normalize3 as normalize,
   relative3 as relative,
   resolve3 as resolve,
-  toFileUrl3 as toFileUrl
+  toFileUrl3 as toFileUrl,
 };

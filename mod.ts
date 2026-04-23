@@ -2,13 +2,13 @@ import {
   basename,
   dirname,
   extname,
+  fromFileUrl,
   isAbsolute,
   join,
   normalize,
   relative,
   resolve,
   toFileUrl,
-  fromFileUrl,
 } from "./path.js";
 import * as _fs from "./_fs.ts";
 

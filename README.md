@@ -15,9 +15,9 @@ deno add @david/path
 ## Example
 
 ```ts
-import { Path } from "@david/path";
+import path from "@david/path";
 
-const srcDir = new Path("src");
+const srcDir = path("src");
 
 console.log(srcDir.existsSync());
 

@@ -9,7 +9,6 @@ import {
   assertThrows,
   cwd,
   inspect,
-  isNode,
   isWindows,
   test,
   withTempDir,
@@ -344,15 +343,8 @@ test("realpath", async () => {
   await withTempDir(async (tempDir) => {
     let file = tempDir.join("file").resolve();
     file.writeSync("");
-    // need to do realPathSync for GH actions CI
+    // canonicalize (ex. /var -> /private/var on macOS)
     file = file.realPathSync();
-    // for the comparison, node doesn't canonicalize
-    // RUNNER~1 to runneradmin for some reason
-    if (isNode && isWindows) {
-      file = new Path(
-        file.toString().replace("\\RUNNER~1\\", "\\runneradmin\\"),
-      );
-    }
     const symlink = new Path("other");
     symlink.symlinkToSync(file, { kind: "absolute" });
     assertEquals(

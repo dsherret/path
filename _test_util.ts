@@ -1,13 +1,11 @@
 import { test } from "node:test";
 import { strict as nodeAssert } from "node:assert";
 import { inspect } from "node:util";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Path } from "./mod.ts";
 
-// deno-lint-ignore no-explicit-any
-export const isNode: boolean = typeof (globalThis as any).Deno === "undefined";
 export const isWindows: boolean = process.platform === "win32";
 
 export { inspect, test };
@@ -90,7 +88,11 @@ export async function withTempDir(
   action: (path: Path) => Promise<void> | void,
 ): Promise<void> {
   const originalDir = cwd();
-  const dirPath = mkdtempSync(join(tmpdir(), "david-path-test-"));
+  // canonicalize with the native realpath so 8.3 short names
+  // like RUNNER~1 on the GH actions CI are expanded
+  const dirPath = realpathSync.native(
+    mkdtempSync(join(tmpdir(), "david-path-test-")),
+  );
   chdir(dirPath);
   try {
     await action(new Path(dirPath).resolve());

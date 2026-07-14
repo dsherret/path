@@ -1,6 +1,9 @@
 {
   "name": "@david/path",
   "exports": "./mod.ts",
+  "imports": {
+    "@std/path": "jsr:@std/path@^1.1.6"
+  },
   "lint": {
     "rules": {
       "exclude": ["no-process-global"]

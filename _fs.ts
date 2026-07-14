@@ -1,6 +1,16 @@
-import fs from "node:fs";
-import fsPromises from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join } from "@std/path";
+
+const nodeProcess = globalThis.process;
+let nodeFs: typeof import("node:fs") | undefined;
+
+function getNodeFs(): typeof import("node:fs") {
+  return nodeFs ??= nodeProcess.getBuiltinModule("node:fs");
+}
+
+let nodeFsPromises: typeof import("node:fs/promises") | undefined;
+function getNodeFsPromises(): typeof import("node:fs/promises") {
+  return nodeFsPromises ??= nodeProcess.getBuiltinModule("node:fs/promises");
+}
 
 /** Information about a file or directory. Shape matches `node:fs` `Stats`. */
 export interface FileInfo {
@@ -134,7 +144,7 @@ export class FsFile {
       ? new TextEncoder().encode(data)
       : data;
     return new Promise<number>((resolve, reject) => {
-      fs.write(
+      getNodeFs().write(
         this._fd,
         bytes,
         0,
@@ -156,13 +166,13 @@ export class FsFile {
     const bytes = typeof data === "string"
       ? new TextEncoder().encode(data)
       : data;
-    return fs.writeSync(this._fd, bytes, 0, bytes.length);
+    return getNodeFs().writeSync(this._fd, bytes, 0, bytes.length);
   }
 
   /** Reads into `buf`, resolving to the number of bytes read (0 at EOF). */
   read(buf: Uint8Array): Promise<number> {
     return new Promise<number>((resolve, reject) => {
-      fs.read(this._fd, buf, 0, buf.length, null, (err, bytesRead: number) => {
+      getNodeFs().read(this._fd, buf, 0, buf.length, null, (err, bytesRead: number) => {
         if (err) reject(err);
         else resolve(bytesRead);
       });
@@ -171,12 +181,12 @@ export class FsFile {
 
   /** Synchronously reads into `buf`, returning the number of bytes read (0 at EOF). */
   readSync(buf: Uint8Array): number {
-    return fs.readSync(this._fd, buf, 0, buf.length, null);
+    return getNodeFs().readSync(this._fd, buf, 0, buf.length, null);
   }
 
   /** Closes the file handle. */
   close(): void {
-    fs.closeSync(this._fd);
+    getNodeFs().closeSync(this._fd);
   }
 
   /** A writable stream that writes to this file. */
@@ -185,7 +195,7 @@ export class FsFile {
     return new WritableStream({
       write(chunk) {
         return new Promise<void>((resolve, reject) => {
-          fs.write(fd, chunk, 0, chunk.length, null, (err) => {
+          getNodeFs().write(fd, chunk, 0, chunk.length, null, (err) => {
             if (err) reject(err);
             else resolve();
           });
@@ -201,7 +211,7 @@ export class FsFile {
       pull(controller) {
         return new Promise<void>((resolve, reject) => {
           const buf = new Uint8Array(16384);
-          fs.read(fd, buf, 0, buf.length, null, (err, bytesRead: number) => {
+          getNodeFs().read(fd, buf, 0, buf.length, null, (err, bytesRead: number) => {
             if (err) {
               reject(err);
               return;
@@ -220,46 +230,46 @@ export class FsFile {
 }
 
 export function stat(path: string): Promise<FileInfo> {
-  return fsPromises.stat(path);
+  return getNodeFsPromises().stat(path);
 }
 
 export function statSync(path: string): FileInfo {
-  return fs.statSync(path);
+  return getNodeFs().statSync(path);
 }
 
 export function lstat(path: string): Promise<FileInfo> {
-  return fsPromises.lstat(path);
+  return getNodeFsPromises().lstat(path);
 }
 
 export function lstatSync(path: string): FileInfo {
-  return fs.lstatSync(path);
+  return getNodeFs().lstatSync(path);
 }
 
 export function realPath(path: string): Promise<string> {
-  return fsPromises.realpath(path);
+  return getNodeFsPromises().realpath(path);
 }
 
 export function realPathSync(path: string): string {
-  return fs.realpathSync(path);
+  return getNodeFs().realpathSync(path);
 }
 
 export async function mkdirFn(
   path: string,
   options?: MkdirOptions,
 ): Promise<void> {
-  await fsPromises.mkdir(path, options);
+  await getNodeFsPromises().mkdir(path, options);
 }
 
 export function mkdirSyncFn(path: string, options?: MkdirOptions): void {
-  fs.mkdirSync(path, options);
+  getNodeFs().mkdirSync(path, options);
 }
 
 export async function linkFn(oldPath: string, newPath: string): Promise<void> {
-  await fsPromises.link(oldPath, newPath);
+  await getNodeFsPromises().link(oldPath, newPath);
 }
 
 export function linkSyncFn(oldPath: string, newPath: string): void {
-  fs.linkSync(oldPath, newPath);
+  getNodeFs().linkSync(oldPath, newPath);
 }
 
 export async function symlinkFn(
@@ -267,7 +277,7 @@ export async function symlinkFn(
   path: string,
   type?: { type: "file" | "dir" | "junction" },
 ): Promise<void> {
-  await fsPromises.symlink(target, path, type?.type);
+  await getNodeFsPromises().symlink(target, path, type?.type);
 }
 
 export function symlinkSyncFn(
@@ -275,16 +285,16 @@ export function symlinkSyncFn(
   path: string,
   type?: { type: "file" | "dir" | "junction" },
 ): void {
-  fs.symlinkSync(target, path, type?.type);
+  getNodeFs().symlinkSync(target, path, type?.type);
 }
 
 export async function* readDir(path: string): AsyncGenerator<DirEntryInfo> {
-  const entries = await fsPromises.readdir(path, { withFileTypes: true });
+  const entries = await getNodeFsPromises().readdir(path, { withFileTypes: true });
   yield* entries;
 }
 
 export function* readDirSync(path: string): Generator<DirEntryInfo> {
-  yield* fs.readdirSync(path, { withFileTypes: true });
+  yield* getNodeFs().readdirSync(path, { withFileTypes: true });
 }
 
 export async function readFile(
@@ -292,34 +302,34 @@ export async function readFile(
   options?: ReadFileOptions,
 ): Promise<Uint8Array> {
   return new Uint8Array(
-    await fsPromises.readFile(path, { signal: options?.signal }),
+    await getNodeFsPromises().readFile(path, { signal: options?.signal }),
   );
 }
 
 export function readFileSync(path: string): Uint8Array {
-  return new Uint8Array(fs.readFileSync(path));
+  return new Uint8Array(getNodeFs().readFileSync(path));
 }
 
 export function readTextFile(
   path: string,
   options?: ReadFileOptions,
 ): Promise<string> {
-  return fsPromises.readFile(path, {
+  return getNodeFsPromises().readFile(path, {
     encoding: "utf8",
     signal: options?.signal,
   });
 }
 
 export function readTextFileSync(path: string): string {
-  return fs.readFileSync(path, "utf8");
+  return getNodeFs().readFileSync(path, "utf8");
 }
 
 export async function chmod(path: string, mode: number): Promise<void> {
-  await fsPromises.chmod(path, mode);
+  await getNodeFsPromises().chmod(path, mode);
 }
 
 export function chmodSync(path: string, mode: number): void {
-  fs.chmodSync(path, mode);
+  getNodeFs().chmodSync(path, mode);
 }
 
 export async function chown(
@@ -327,7 +337,7 @@ export async function chown(
   uid: number | null,
   gid: number | null,
 ): Promise<void> {
-  await fsPromises.chown(path, uid ?? -1, gid ?? -1);
+  await getNodeFsPromises().chown(path, uid ?? -1, gid ?? -1);
 }
 
 export function chownSync(
@@ -335,7 +345,7 @@ export function chownSync(
   uid: number | null,
   gid: number | null,
 ): void {
-  fs.chownSync(path, uid ?? -1, gid ?? -1);
+  getNodeFs().chownSync(path, uid ?? -1, gid ?? -1);
 }
 
 export function openFile(
@@ -343,7 +353,7 @@ export function openFile(
   options?: OpenOptions,
 ): Promise<FsFile> {
   return new Promise<FsFile>((resolve, reject) => {
-    fs.open(path, openOptionsToFlags(options), options?.mode, (err, fd) => {
+    getNodeFs().open(path, openOptionsToFlags(options), options?.mode, (err, fd) => {
       if (err) reject(err);
       else resolve(new FsFile(fd));
     });
@@ -351,7 +361,7 @@ export function openFile(
 }
 
 export function openFileSync(path: string, options?: OpenOptions): FsFile {
-  const fd = fs.openSync(path, openOptionsToFlags(options), options?.mode);
+  const fd = getNodeFs().openSync(path, openOptionsToFlags(options), options?.mode);
   return new FsFile(fd);
 }
 
@@ -378,48 +388,48 @@ export async function remove(
   options?: RemoveOptions,
 ): Promise<void> {
   if (options?.recursive) {
-    await fsPromises.rm(path, { recursive: true });
+    await getNodeFsPromises().rm(path, { recursive: true });
     return;
   }
   // without `recursive`, remove files and empty directories only
-  const info = await fsPromises.lstat(path);
+  const info = await getNodeFsPromises().lstat(path);
   if (info.isDirectory()) {
-    await fsPromises.rmdir(path);
+    await getNodeFsPromises().rmdir(path);
   } else {
-    await fsPromises.unlink(path);
+    await getNodeFsPromises().unlink(path);
   }
 }
 
 export function removeSync(path: string, options?: RemoveOptions): void {
   if (options?.recursive) {
-    fs.rmSync(path, { recursive: true });
+    getNodeFs().rmSync(path, { recursive: true });
     return;
   }
-  const info = fs.lstatSync(path);
+  const info = getNodeFs().lstatSync(path);
   if (info.isDirectory()) {
-    fs.rmdirSync(path);
+    getNodeFs().rmdirSync(path);
   } else {
-    fs.unlinkSync(path);
+    getNodeFs().unlinkSync(path);
   }
 }
 
 export async function copyFileFn(src: string, dest: string): Promise<void> {
-  await fsPromises.copyFile(src, dest);
+  await getNodeFsPromises().copyFile(src, dest);
 }
 
 export function copyFileSyncFn(src: string, dest: string): void {
-  fs.copyFileSync(src, dest);
+  getNodeFs().copyFileSync(src, dest);
 }
 
 export async function renameFn(
   oldPath: string,
   newPath: string,
 ): Promise<void> {
-  await fsPromises.rename(oldPath, newPath);
+  await getNodeFsPromises().rename(oldPath, newPath);
 }
 
 export function renameSyncFn(oldPath: string, newPath: string): void {
-  fs.renameSync(oldPath, newPath);
+  getNodeFs().renameSync(oldPath, newPath);
 }
 
 export async function ensureDir(path: string): Promise<void> {
@@ -586,7 +596,7 @@ function lstatOrUndefinedSync(path: string): FileInfo | undefined {
 }
 
 function openOptionsToFlags(options?: OpenOptions): number {
-  const C = fs.constants;
+  const C = getNodeFs().constants;
   if (!options) return C.O_RDONLY;
   const { read, write, append, truncate, create, createNew } = options;
   // createNew / create / append imply write unless read was explicitly requested too

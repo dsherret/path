@@ -9,7 +9,7 @@ import {
   relative,
   resolve,
   toFileUrl,
-} from "./path.js";
+} from "@std/path";
 import * as _fs from "./_fs.ts";
 
 export type {

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import fsPromises from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join } from "@std/path";
 
 /** Information about a file or directory. Shape matches `node:fs` `Stats`. */
 export interface FileInfo {

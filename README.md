@@ -1,4 +1,4 @@
-# @david/path
+# path
 
 [![JSR](https://jsr.io/badges/@david/path)](https://jsr.io/@david/path)
 [![npm](https://img.shields.io/npm/v/@dsherret/path)](https://www.npmjs.com/package/@dsherret/path)

@@ -172,10 +172,17 @@ export class FsFile {
   /** Reads into `buf`, resolving to the number of bytes read (0 at EOF). */
   read(buf: Uint8Array): Promise<number> {
     return new Promise<number>((resolve, reject) => {
-      getNodeFs().read(this._fd, buf, 0, buf.length, null, (err, bytesRead: number) => {
-        if (err) reject(err);
-        else resolve(bytesRead);
-      });
+      getNodeFs().read(
+        this._fd,
+        buf,
+        0,
+        buf.length,
+        null,
+        (err, bytesRead: number) => {
+          if (err) reject(err);
+          else resolve(bytesRead);
+        },
+      );
     });
   }
 
@@ -211,18 +218,25 @@ export class FsFile {
       pull(controller) {
         return new Promise<void>((resolve, reject) => {
           const buf = new Uint8Array(16384);
-          getNodeFs().read(fd, buf, 0, buf.length, null, (err, bytesRead: number) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            if (bytesRead === 0) {
-              controller.close();
-            } else {
-              controller.enqueue(buf.subarray(0, bytesRead));
-            }
-            resolve();
-          });
+          getNodeFs().read(
+            fd,
+            buf,
+            0,
+            buf.length,
+            null,
+            (err, bytesRead: number) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              if (bytesRead === 0) {
+                controller.close();
+              } else {
+                controller.enqueue(buf.subarray(0, bytesRead));
+              }
+              resolve();
+            },
+          );
         });
       },
     });
@@ -289,7 +303,9 @@ export function symlinkSyncFn(
 }
 
 export async function* readDir(path: string): AsyncGenerator<DirEntryInfo> {
-  const entries = await getNodeFsPromises().readdir(path, { withFileTypes: true });
+  const entries = await getNodeFsPromises().readdir(path, {
+    withFileTypes: true,
+  });
   yield* entries;
 }
 
@@ -353,15 +369,24 @@ export function openFile(
   options?: OpenOptions,
 ): Promise<FsFile> {
   return new Promise<FsFile>((resolve, reject) => {
-    getNodeFs().open(path, openOptionsToFlags(options), options?.mode, (err, fd) => {
-      if (err) reject(err);
-      else resolve(new FsFile(fd));
-    });
+    getNodeFs().open(
+      path,
+      openOptionsToFlags(options),
+      options?.mode,
+      (err, fd) => {
+        if (err) reject(err);
+        else resolve(new FsFile(fd));
+      },
+    );
   });
 }
 
 export function openFileSync(path: string, options?: OpenOptions): FsFile {
-  const fd = getNodeFs().openSync(path, openOptionsToFlags(options), options?.mode);
+  const fd = getNodeFs().openSync(
+    path,
+    openOptionsToFlags(options),
+    options?.mode,
+  );
   return new FsFile(fd);
 }
 

@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: canary
+          deno-version: 2.x
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
@@ -37,6 +37,33 @@ jobs:
       - name: Node tests
         run: npx deno-test@1.0.3
 
+  npm:
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.x
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Get tag version
+        if: startsWith(github.ref, 'refs/tags/')
+        id: get_tag_version
+        run: echo TAG_VERSION=${GITHUB_REF/refs\/tags\//} >> $GITHUB_OUTPUT
+
+      - name: npm build
+        run: deno task dnt ${{steps.get_tag_version.outputs.TAG_VERSION}}
+
+      - name: npm publish
+        if: startsWith(github.ref, 'refs/tags/')
+        run: cd npm && npm publish
+
   publish:
     permissions:
       contents: read
@@ -46,7 +73,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: canary
+          deno-version: 2.x
       - name: Publish to JSR on tag
         if: runner.os == 'Linux'
-        run: deno run -A jsr:@david/publish-on-tag@0.2.0
+        run: deno run -A @david/publish-on-tag

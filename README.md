@@ -1,6 +1,7 @@
 # @david/path
 
 [![JSR](https://jsr.io/badges/@david/path)](https://jsr.io/@david/path)
+[![npm](https://img.shields.io/npm/v/@dsherret/path)](https://www.npmjs.com/package/@dsherret/path)
 
 Path class for JavaScript.
 
@@ -8,8 +9,12 @@ Path class for JavaScript.
 
 ## Setup
 
-```
-deno add @david/path
+```sh
+# jsr
+deno add jsr:@david/path
+
+# npm
+npm install @dsherret/path
 ```
 
 ## Example

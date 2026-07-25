@@ -37,6 +37,22 @@ export interface SymlinkOptions {
   type?: "file" | "dir" | "junction";
 }
 
+/** Options for piping a stream to a destination.
+ *
+ * Declared here rather than using the global type of the same name
+ * because it's not available in all environments.
+ */
+export interface StreamPipeOptions {
+  /** Prevent the destination from being aborted when the source errors. */
+  preventAbort?: boolean;
+  /** Prevent the source from being cancelled when the destination errors. */
+  preventCancel?: boolean;
+  /** Prevent the destination from being closed when the source closes. */
+  preventClose?: boolean;
+  /** Signal used to abort the pipe. */
+  signal?: AbortSignal;
+}
+
 /** Creates a new {@linkcode Path}. Shorthand for `new Path(...)`. */
 export function path(path: string | URL | Path): Path {
   return new Path(path);

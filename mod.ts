@@ -53,8 +53,11 @@ export interface StreamPipeOptions {
   signal?: AbortSignal;
 }
 
+/** Something that can be converted to a {@linkcode Path}. */
+export type PathLike = string | URL | Path;
+
 /** Creates a new {@linkcode Path}. Shorthand for `new Path(...)`. */
-export function path(path: string | URL | Path): Path {
+export function path(path: PathLike): Path {
   return new Path(path);
 }
 
@@ -74,7 +77,7 @@ export class Path {
   private static instanceofSymbol = Symbol.for("@david/path.Path");
 
   /** Creates a new path from the provided string, URL, or another Path. */
-  constructor(path: string | URL | Path) {
+  constructor(path: PathLike) {
     if (path instanceof URL) {
       this.#path = fromFileUrl(path);
     } else if (path instanceof Path) {
@@ -433,7 +436,7 @@ export class Path {
   }
 
   /** Gets the relative path from this path to the specified path. */
-  relative(to: string | URL | Path): string {
+  relative(to: PathLike): string {
     const toPathRef = ensurePath(to);
     return relative(this.resolve().#path, toPathRef.resolve().toString());
   }
@@ -495,7 +498,7 @@ export class Path {
     opts?: Partial<SymlinkOptions>,
   ): Promise<void>;
   async symlinkTo(
-    target: string | URL | Path,
+    target: PathLike,
     opts?: Partial<SymlinkOptions>,
   ): Promise<void> {
     await createSymlink(this.#resolveCreateSymlinkOpts(target, opts));
@@ -516,14 +519,14 @@ export class Path {
     opts?: Partial<SymlinkOptions>,
   ): void;
   symlinkToSync(
-    target: string | URL | Path,
+    target: PathLike,
     opts?: Partial<SymlinkOptions>,
   ): void {
     createSymlinkSync(this.#resolveCreateSymlinkOpts(target, opts));
   }
 
   #resolveCreateSymlinkOpts(
-    target: string | URL | Path,
+    target: PathLike,
     opts: Partial<SymlinkOptions> | undefined,
   ): CreateSymlinkOpts {
     if (opts?.kind == null) {
@@ -564,7 +567,7 @@ export class Path {
    * Creates a hardlink to the provided target path.
    */
   async linkTo(
-    targetPath: string | URL | Path,
+    targetPath: PathLike,
   ): Promise<void> {
     const targetPathRef = ensurePath(targetPath).resolve();
     await _fs.linkFn(targetPathRef.toString(), this.resolve().toString());
@@ -574,7 +577,7 @@ export class Path {
    * Synchronously creates a hardlink to the provided target path.
    */
   linkToSync(
-    targetPath: string | URL | Path,
+    targetPath: PathLike,
   ): void {
     const targetPathRef = ensurePath(targetPath).resolve();
     _fs.linkSyncFn(targetPathRef.toString(), this.resolve().toString());
@@ -1189,7 +1192,7 @@ export class Path {
    * @returns The destination path.
    */
   async copy(
-    destinationPath: string | URL | Path,
+    destinationPath: PathLike,
     options?: { overwrite?: boolean },
   ): Promise<Path> {
     const pathRef = ensurePath(destinationPath);
@@ -1201,7 +1204,7 @@ export class Path {
    * @returns The destination path.
    */
   copySync(
-    destinationPath: string | URL | Path,
+    destinationPath: PathLike,
     options?: { overwrite?: boolean },
   ): Path {
     const pathRef = ensurePath(destinationPath);
@@ -1214,7 +1217,7 @@ export class Path {
    * @returns The destination path.
    */
   copyToDir(
-    destinationDirPath: string | URL | Path,
+    destinationDirPath: PathLike,
     options?: { overwrite?: boolean },
   ): Promise<Path> {
     const destinationPath = ensurePath(destinationDirPath)
@@ -1227,7 +1230,7 @@ export class Path {
    * @returns The destination path.
    */
   copyToDirSync(
-    destinationDirPath: string | URL | Path,
+    destinationDirPath: PathLike,
     options?: { overwrite?: boolean },
   ): Path {
     const destinationPath = ensurePath(destinationDirPath)
@@ -1239,7 +1242,7 @@ export class Path {
    * Copies the file to the specified destination path.
    * @returns The destination path.
    */
-  copyFile(destinationPath: string | URL | Path): Promise<Path> {
+  copyFile(destinationPath: PathLike): Promise<Path> {
     const pathRef = ensurePath(destinationPath);
     return _fs.copyFileFn(this.#path, pathRef.toString())
       .then(() => pathRef);
@@ -1249,7 +1252,7 @@ export class Path {
    * Copies the file to the destination path synchronously.
    * @returns The destination path.
    */
-  copyFileSync(destinationPath: string | URL | Path): Path {
+  copyFileSync(destinationPath: PathLike): Path {
     const pathRef = ensurePath(destinationPath);
     _fs.copyFileSyncFn(this.#path, pathRef.toString());
     return pathRef;
@@ -1259,7 +1262,7 @@ export class Path {
    * Copies the file to the specified directory.
    * @returns The destination path.
    */
-  copyFileToDir(destinationDirPath: string | URL | Path): Promise<Path> {
+  copyFileToDir(destinationDirPath: PathLike): Promise<Path> {
     const destinationPath = ensurePath(destinationDirPath)
       .join(this.basename());
     return this.copyFile(destinationPath);
@@ -1269,7 +1272,7 @@ export class Path {
    * Copies the file to the specified directory synchronously.
    * @returns The destination path.
    */
-  copyFileToDirSync(destinationDirPath: string | URL | Path): Path {
+  copyFileToDirSync(destinationDirPath: PathLike): Path {
     const destinationPath = ensurePath(destinationDirPath)
       .join(this.basename());
     return this.copyFileSync(destinationPath);
@@ -1280,7 +1283,7 @@ export class Path {
    * the renamed path.
    * @returns The destination path.
    */
-  rename(newPath: string | URL | Path): Promise<Path> {
+  rename(newPath: PathLike): Promise<Path> {
     const pathRef = ensurePath(newPath);
     return _fs.renameFn(this.#path, pathRef.toString()).then(() => pathRef);
   }
@@ -1289,7 +1292,7 @@ export class Path {
    * Moves the file or directory returning the renamed path synchronously.
    * @returns The destination path.
    */
-  renameSync(newPath: string | URL | Path): Path {
+  renameSync(newPath: PathLike): Path {
     const pathRef = ensurePath(newPath);
     _fs.renameSyncFn(this.#path, pathRef.toString());
     return pathRef;
@@ -1299,7 +1302,7 @@ export class Path {
    * Moves the file or directory to the specified directory.
    * @returns The destination path.
    */
-  renameToDir(destinationDirPath: string | URL | Path): Promise<Path> {
+  renameToDir(destinationDirPath: PathLike): Promise<Path> {
     const destinationPath = ensurePath(destinationDirPath)
       .join(this.basename());
     return this.rename(destinationPath);
@@ -1309,7 +1312,7 @@ export class Path {
    * Moves the file or directory to the specified directory synchronously.
    * @returns The destination path.
    */
-  renameToDirSync(destinationDirPath: string | URL | Path): Path {
+  renameToDirSync(destinationDirPath: PathLike): Path {
     const destinationPath = ensurePath(destinationDirPath)
       .join(this.basename());
     return this.renameSync(destinationPath);
@@ -1334,7 +1337,7 @@ export class Path {
   }
 }
 
-function ensurePath(path: string | URL | Path) {
+function ensurePath(path: PathLike) {
   return path instanceof Path ? path : new Path(path);
 }
 

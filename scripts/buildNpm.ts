@@ -57,12 +57,6 @@ await build({
 // bundles the esm output into a single mod.js so the published
 // package doesn't ship the jsr.io deps as many small files
 async function bundleIntoSingleFile() {
-  // dnt rewrites `globalThis` to a merge proxy even with no shims,
-  // so replace it with a passthrough before bundling
-  await Deno.writeTextFile(
-    "npm/esm/_dnt.shims.js",
-    "export const dntGlobalThis = globalThis;\n",
-  );
   const bundle = await esbuild.build({
     entryPoints: ["npm/esm/mod.js"],
     bundle: true,
@@ -78,7 +72,5 @@ async function bundleIntoSingleFile() {
       await Deno.remove(`npm/esm/${entry.name}`);
     }
   }
-  // nothing references the shim types, so don't ship them
-  await Deno.remove("npm/esm/_dnt.shims.d.ts");
   await Deno.writeTextFile("npm/esm/mod.js", bundle.outputFiles[0].text);
 }
